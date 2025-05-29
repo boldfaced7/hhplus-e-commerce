@@ -1,25 +1,16 @@
-# 🔄 시퀀스 다이어그램
+# 🔄 시퀀스 다이어그램 (도메인 중심)
 
 ## 📦 시나리오 1: 잔액 충전
 
 ```mermaid
 sequenceDiagram
-    participant C as Client
-    participant BC as ChargeBalanceController
-    participant BCm as ChargeBalanceService
-    participant BQ as GetBalanceService
-    participant BR as BalanceRepository
+    participant Client
+    participant Balance
 
-    C ->> BC : POST /balance/charge
-    BC ->> BCm : charge(userId, amount)
-    BCm ->> BQ : getBalance(userId)
-    BQ ->> BR : findByUserId(userId)
-    BR -->> BQ : currentBalance
-    BQ -->> BCm : currentBalance
-    BCm ->> BR : updateBalance(userId, amount)
-    BR -->> BCm : updatedBalance
-    BCm -->> BC : updatedBalance
-    BC -->> C : updatedBalance
+    Client ->> Balance: 잔액 충전 요청
+    Balance ->> Balance: 사용자 잔액 조회
+    Balance ->> Balance: 잔액 증가 및 저장
+    Balance -->> Client: 충전된 잔액 반환
 ```
 
 ---
@@ -28,17 +19,12 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant C as Client
-    participant PC as ProductQueryController
-    participant PQ as ProductQueryService
-    participant PR as ProductRepository
+    participant Client
+    participant Product
 
-    C ->> PC : GET /products?page=0&size=10
-    PC ->> PQ : getProductList(page, size)
-    PQ ->> PR : findAllWithStock(page, size)
-    PR -->> PQ : paginatedProductList
-    PQ -->> PC : paginatedProductList
-    PC -->> C : 상품 목록 반환
+    Client ->> Product: 상품 목록 조회 요청 (page, size)
+    Product ->> Product: 상품 목록 조회 (페이징)
+    Product -->> Client: 상품 목록 반환
 ```
 
 ---
@@ -47,33 +33,22 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant C as Client
-    participant CC as IssueCouponController
-    participant CI as IssueCouponService
-    participant RL as RedisLockService
-    participant CQ as HasCouponService
-    participant CR as CouponRepository
-    participant RS as RedisService
+    participant Client
+    participant Coupon
+    participant Redis
 
-    C ->> CC : POST /coupons/issue
-    CC ->> CI : issueCoupon(userId)
-    CI ->> RL : tryLock("coupon::userId")
-    RL -->> CI : lockResult
+    Client ->> Coupon: 쿠폰 발급 요청
+    Coupon ->> Redis: 사용자 락 획득 시도
     alt 락 획득 실패
-        CI -->> CC : 발급 실패 응답 (중복/마감)
+        Coupon -->> Client: 발급 실패 응답
     else 락 획득 성공
-        CI ->> CQ : hasCoupon(userId)
-        CQ ->> CR : findByUserId(userId)
-        CR -->> CQ : couponEntity or null
-        CQ -->> CI : hasCouponResult
-        alt 이미 발급됨
-            CI -->> CC : 응답 (이미 보유)
+        Coupon ->> Coupon: 쿠폰 보유 여부 확인
+        alt 이미 보유
+            Coupon -->> Client: 이미 보유 응답
         else 미발급
-            CI ->> CR : saveCoupon(userId)
-            CR -->> CI : savedCoupon
-            CI ->> RS : decrement(couponStock)
-            RS -->> CI : newCouponStock
-            CI -->> CC : 쿠폰 발급 성공
+            Coupon ->> Coupon: 쿠폰 발급 및 저장
+            Coupon ->> Coupon: 재고 감소
+            Coupon -->> Client: 발급 성공 응답
         end
     end
 ```
@@ -84,68 +59,27 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant C as Client
-    participant OC as PlaceOrderController
-    participant OS as PlaceOrderService
+    participant Client
+    participant Order
+    participant Balance
+    participant Product
+    participant Coupon
+    participant Outbox
 
-    participant BQ as GetBalanceService
-    participant BZ as DeductBalanceService
-    participant BR as BalanceRepository
+    Client ->> Order: 주문 요청 (상품 + 쿠폰)
+    Order ->> Balance: 사용자 잔액 확인
+    Order ->> Product: 재고 확인
+    Order ->> Coupon: 쿠폰 유효성 검증
 
-    participant IR as CheckInventoryService
-    participant IC as CommitInventoryService
-    participant PR as ProductRepository
-
-    participant CQ as ValidateCouponService
-    participant CC as UseCouponService
-    participant CR as CouponRepository
-
-    participant OR as OrderRepository
-    participant EO as ExternalOrderSender
-
-    C ->> OC : POST /orders
-    OC ->> OS : placeOrder(userId, items, couponId)
-
-    OS ->> BQ : getBalance(userId)
-    BQ ->> BR : findByUserId(userId)
-    BR -->> BQ : currentBalance
-    BQ -->> OS : currentBalance
-
-    OS ->> IR : checkAndReserve(items)
-    IR ->> PR : checkStock(items)
-    PR -->> IR : stockInfo
-    IR -->> OS : stockValidationResult
-
-    OS ->> CQ : validate(couponId)
-    CQ ->> CR : findById(couponId)
-    CR -->> CQ : couponEntity
-    CQ -->> OS : couponValidationResult
-
-    alt 잔액 부족 or 재고 부족 or 쿠폰 무효
-        OS -->> OC : 주문 실패 응답
-    else 정상 처리
-        OS ->> BZ : deduct(userId, amount)
-        BZ ->> BR : updateBalance(userId, amount)
-        BR -->> BZ : updatedBalance
-        BZ -->> OS : updatedBalance
-
-        OS ->> IC : commit(items)
-        IC ->> PR : decrementStock(items)
-        PR -->> IC : stockUpdateResult
-        IC -->> OS : stockCommitResult
-
-        OS ->> CC : markAsUsed(couponId)
-        CC ->> CR : updateStatus(couponId)
-        CR -->> CC : updatedCoupon
-        CC -->> OS : couponMarkedUsed
-
-        OS ->> OR : save(order)
-        OR -->> OS : savedOrder
-
-        OS ->> EO : sendAsync(order)
-        EO -->> OS : ack
-
-        OS -->> OC : 주문 성공 응답
+    alt 실패 조건 존재 (잔액 부족 / 재고 부족 / 쿠폰 무효)
+        Order -->> Client: 주문 실패 응답
+    else 성공 시
+        Order ->> Balance: 잔액 차감
+        Order ->> Product: 재고 차감
+        Order ->> Coupon: 쿠폰 사용 처리
+        Order ->> Order: 주문 저장
+        Order ->> Outbox: 주문 이벤트 비동기 전송
+        Order -->> Client: 주문 성공 응답
     end
 ```
 
@@ -155,18 +89,12 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant C as Client
-    participant PC as TopProductQueryController
-    participant TQ as TopProductQueryService
-    participant OS as OrderStatsRepository
-    participant PR as ProductQueryService
+    participant Client
+    participant ProductStats
+    participant Product
 
-    C ->> PC : GET /products/top
-    PC ->> TQ : getTopProducts()
-    TQ ->> OS : findTopProductsLast3Days()
-    OS -->> TQ : topProductIdsWithCount
-    TQ ->> PR : fetchProductDetails(productIds)
-    PR -->> TQ : productDetails
-    TQ -->> PC : 인기 상품 리스트
-    PC -->> C : 인기 상품 리스트 반환
+    Client ->> ProductStats: 인기 상품 조회 요청
+    ProductStats ->> ProductStats: 최근 3일간 집계된 상품 조회
+    ProductStats ->> Product: 상품 상세 조회
+    ProductStats -->> Client: 인기 상품 리스트 반환
 ```
