@@ -9,6 +9,7 @@ services:
       - MYSQL_USER=application
       - MYSQL_PASSWORD=application
       - MYSQL_DATABASE=hhplus
+    command: --lower_case_table_names=1
     volumes:
       - ./data/mysql/:/var/lib/mysql
 
