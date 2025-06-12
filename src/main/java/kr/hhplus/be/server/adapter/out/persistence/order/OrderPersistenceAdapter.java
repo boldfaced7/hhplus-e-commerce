@@ -33,13 +33,16 @@ public class OrderPersistenceAdapter implements
 
     @Override
     public Order saveOrder(Order order) {
-        var toBeSavedOrder = OrderMapper.toJpa(order);
-        var toBeSavedOrderItems = OrderItemMapper.toJpaMap(order.getOrderItems());
+        var toBeSavedOrderJpa = OrderMapper.toJpa(order);
+        var savedOrderJpa = orderJpaRepository.save(toBeSavedOrderJpa);
 
-        var savedOrder = orderJpaRepository.save(toBeSavedOrder);
-        var savedOrderItems = orderItemJpaRepository.saveAll(toBeSavedOrderItems);
+        var toBeSavedOrderItemsJpa = OrderItemMapper.toJpaMap(order.getOrderItems());
+        toBeSavedOrderItemsJpa.values().forEach(orderItem ->
+                orderItem.setOrderId(savedOrderJpa.getId())
+        );
+        var savedOrderItemsJpa = orderItemJpaRepository.saveAll(toBeSavedOrderItemsJpa);
 
-        return OrderMapper.toDomain(savedOrder, savedOrderItems);
+        return OrderMapper.toDomain(savedOrderJpa, savedOrderItemsJpa);
     }
 
     @Override
