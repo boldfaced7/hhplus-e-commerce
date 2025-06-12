@@ -16,7 +16,7 @@ public class OrderItemMapper {
     public static OrderItemJpa toJpa(OrderItem orderItem) {
         return new OrderItemJpa(
             (orderItem.getOrderItemId() != null) ? orderItem.getOrderItemId().value() : null,
-            orderItem.getOrderId().value(),
+            (orderItem.getOrderId() != null) ? orderItem.getOrderId().value() : null,
             orderItem.getProductId().value(),
             orderItem.getQuantity().value(),
             orderItem.getOriginalPrice().value(),

@@ -8,8 +8,10 @@ import kr.hhplus.be.server.domain.vo.order.OrderDiscountTotalPrice;
 import kr.hhplus.be.server.domain.vo.order.OrderId;
 import kr.hhplus.be.server.domain.vo.order.OrderOriginalTotalPrice;
 import kr.hhplus.be.server.domain.vo.user.UserId;
+import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class OrderMapper {
 
@@ -17,7 +19,7 @@ public class OrderMapper {
         return new OrderJpa(
             (order.getOrderId() != null) ? order.getOrderId().value() : null,
             order.getUserId().value(),
-            order.getCouponId().value(),
+            order.getCouponId() != null ? order.getCouponId().value() : null,
             order.getOriginalTotalPrice().value(),
             order.getDiscountTotalPrice().value(),
             order.getCreatedAt(),
@@ -29,7 +31,7 @@ public class OrderMapper {
         return Order.create(
             new OrderId(orderJpa.getId()),
             new UserId(orderJpa.getUserId()),
-            new CouponId(orderJpa.getCouponId()),
+            orderJpa.getCouponId() != null ? new CouponId(orderJpa.getCouponId()) : null,
             OrderItemMapper.toDomainMap(orderItems),
             new OrderOriginalTotalPrice(orderJpa.getOriginalTotalPrice()),
             new OrderDiscountTotalPrice(orderJpa.getDiscountTotalPrice()),
