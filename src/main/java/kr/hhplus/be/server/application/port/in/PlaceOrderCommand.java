@@ -1,5 +1,6 @@
 package kr.hhplus.be.server.application.port.in;
 
+import kr.hhplus.be.server.domain.vo.order.Guid;
 import kr.hhplus.be.server.domain.vo.coupon.CouponId;
 import kr.hhplus.be.server.domain.vo.orderitem.OrderItemQuantity;
 import kr.hhplus.be.server.domain.vo.product.ProductId;
@@ -9,9 +10,10 @@ import java.util.Collection;
 import java.util.Map;
 
 public record PlaceOrderCommand(
+        Guid guid,
         UserId userId,
-        Map<ProductId, OrderItemQuantity> orderItemQuantities,
-        CouponId couponId
+        CouponId couponId,
+        Map<ProductId, OrderItemQuantity> orderItemQuantities
 ) {
 
     public Collection<ProductId> productIds() {

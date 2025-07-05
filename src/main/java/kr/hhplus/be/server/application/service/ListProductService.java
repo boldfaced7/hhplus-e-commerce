@@ -18,4 +18,5 @@ public class ListProductService implements ListProductQuery {
     public Page<Product> listProduct(ListProductCommand command) {
         return listProductPort.listProducts(command.pageable());
     }
+
 }

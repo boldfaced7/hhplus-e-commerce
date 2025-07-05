@@ -11,12 +11,14 @@ import kr.hhplus.be.server.domain.vo.product.ProductPrice;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.ToString;
 
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+@ToString
 @Getter
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class OrderItem {

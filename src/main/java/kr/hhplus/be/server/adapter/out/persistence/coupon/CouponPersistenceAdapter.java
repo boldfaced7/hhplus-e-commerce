@@ -17,12 +17,17 @@ public class CouponPersistenceAdapter implements
         SaveCouponPort,
         UpdateCouponPort
 {
-
     private final CouponJpaRepository couponJpaRepository;
 
     @Override
     public Optional<Coupon> loadCoupon(CouponId couponId) {
         return couponJpaRepository.findById(couponId.value())
+                .map(CouponMapper::toDomain);
+    }
+
+    @Override
+    public Optional<Coupon> loadCouponForUpdate(CouponId couponId) {
+        return couponJpaRepository.findByIdForUpdate(couponId.value())
                 .map(CouponMapper::toDomain);
     }
 

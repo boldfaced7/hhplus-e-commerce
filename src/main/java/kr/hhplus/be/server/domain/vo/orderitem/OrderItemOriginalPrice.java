@@ -10,6 +10,6 @@ public record OrderItemOriginalPrice(Long value) {
     }
 
     public OrderItemDiscountPrice discount(CouponDiscountRate discountRate) {
-        return new OrderItemDiscountPrice(Math.round(value - value * discountRate.value()));
+        return new OrderItemDiscountPrice(Math.round(value - (1.0 * discountRate.value())));
     }
 }

@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface LoadCouponPort {
     Optional<Coupon> loadCoupon(CouponId couponId);
+    Optional<Coupon> loadCouponForUpdate(CouponId couponId);
 }

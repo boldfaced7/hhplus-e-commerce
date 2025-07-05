@@ -17,12 +17,17 @@ public class BalancePersistenceAdapter implements
         SaveBalancePort, 
         UpdateBalancePort
 {
-
     private final BalanceJpaRepository balanceJpaRepository;
 
     @Override
     public Optional<Balance> loadBalance(UserId userId) {
         return balanceJpaRepository.findByUserId(userId.value())
+                .map(BalanceMapper::toDomain);
+    }
+
+    @Override
+    public Optional<Balance> loadBalanceForUpdate(UserId userId) {
+        return balanceJpaRepository.findByUserIdForUpdate(userId.value())
                 .map(BalanceMapper::toDomain);
     }
 
