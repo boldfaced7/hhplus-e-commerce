@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.support;
+package kr.hhplus.be.server.application.support;
 
 import org.junit.jupiter.api.Disabled;
 import org.springframework.boot.test.context.SpringBootTest;
