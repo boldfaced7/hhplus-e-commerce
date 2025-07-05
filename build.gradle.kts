@@ -1,6 +1,6 @@
 plugins {
 	java
-	id("org.springframework.boot") version "3.4.1"
+	id("org.springframework.boot") version "3.4.2"
 	id("io.spring.dependency-management") version "1.1.7"
 }
 
@@ -37,6 +37,7 @@ dependencies {
 
     // DB
 	runtimeOnly("com.mysql:mysql-connector-j")
+	testRuntimeOnly("com.h2database:h2")
 
 	// Lombok
 	compileOnly("org.projectlombok:lombok")
@@ -51,6 +52,7 @@ dependencies {
 	testImplementation("org.testcontainers:mysql")
 	testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
 	testImplementation(platform("org.testcontainers:testcontainers-bom:1.19.7"))
+	testImplementation("org.awaitility:awaitility:4.2.0")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
