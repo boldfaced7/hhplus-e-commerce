@@ -1,66 +1,49 @@
 package kr.hhplus.be.server.application.service;
 
 import kr.hhplus.be.server.application.port.in.ChargeBalanceCommand;
-import kr.hhplus.be.server.application.port.out.balance.LoadBalancePort;
-import kr.hhplus.be.server.application.port.out.balance.UpdateBalancePort;
 import kr.hhplus.be.server.domain.model.Balance;
-import kr.hhplus.be.server.domain.vo.balance.BalanceAmount;
-import kr.hhplus.be.server.domain.vo.user.UserId;
-import org.junit.jupiter.api.BeforeEach;
+import kr.hhplus.be.server.application.support.ApplicationUnitTestSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
 
+import static kr.hhplus.be.server.application.service.TestConstants.BALANCE_AMOUNT;
+import static kr.hhplus.be.server.application.service.TestConstants.USER_ID;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-@ExtendWith(MockitoExtension.class)
-class ChargeBalanceServiceTest {
+class ChargeBalanceServiceTest extends ApplicationUnitTestSupport {
 
-    @InjectMocks
-    private ChargeBalanceService chargeBalanceService;
+    @InjectMocks ChargeBalanceService chargeBalanceService;
+    @Mock Balance balance;
 
-    @Mock private Balance balance;
-    @Mock private LoadBalancePort loadBalancePort;
-    @Mock private UpdateBalancePort updateBalancePort;
+    final ChargeBalanceCommand command = new ChargeBalanceCommand(USER_ID, BALANCE_AMOUNT);
 
-    private UserId userId;
-    private BalanceAmount amount;
-    private ChargeBalanceCommand command;
-
-    @BeforeEach
-    void setUp() {
-        userId = new UserId(1L);
-        amount = new BalanceAmount(10000L);
-        command = new ChargeBalanceCommand(userId, amount);
-    }
 
     @Test
     @DisplayName("잔액 충전에 성공한다")
     void chargeBalanceSuccess() {
         // given
         // 잔액 조회
-        doReturn(Optional.of(balance)).when(loadBalancePort).loadBalance(userId);
+        when(loadBalancePort.loadBalanceForUpdate(command.userId())).thenReturn(Optional.of(balance));
         // 잔액 충전
-        doNothing().when(balance).charge(amount);
+        when(balance.charge(command.amount())).thenReturn(balance);
         // 잔액 업데이트
-        doReturn(balance).when(updateBalancePort).updateBalance(balance);
+        when(updateBalancePort.updateBalance(balance)).thenReturn(balance);
 
         // when
         Balance result = chargeBalanceService.chargeBalance(command);
 
         // then
         assertThat(result).isNotNull();
-        
         // 잔액 조회 검증
-        verify(loadBalancePort).loadBalance(userId);
+        verify(loadBalancePort).loadBalanceForUpdate(command.userId());
         // 잔액 충전 검증
-        verify(balance).charge(amount);
+        verify(balance).charge(command.amount());
         // 잔액 업데이트 검증
         verify(updateBalancePort).updateBalance(balance);
     }
