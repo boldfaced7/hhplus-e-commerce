@@ -14,12 +14,11 @@ import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
-public class OrderPersistenceAdapter implements 
+public class OrderPersistenceAdapter implements
         LoadOrderPort,
         SaveOrderPort,
         UpdateOrderPort
 {
-
     private final OrderJpaRepository orderJpaRepository;
     private final OrderItemJpaRepository orderItemJpaRepository;
 
@@ -33,6 +32,14 @@ public class OrderPersistenceAdapter implements
 
     @Override
     public Order saveOrder(Order order) {
+        // 멱등성을 위해 동일한 guid를 가진 주문이 이미 존재하는지 확인
+        var existingOrder = orderJpaRepository.findByGuid(order.getGuid().value());
+        if (existingOrder.isPresent()) {
+            // 이미 존재하는 주문의 OrderItems도 함께 조회
+            var existingOrderItems = orderItemJpaRepository.loadOrderItems(existingOrder.get().getId());
+            return OrderMapper.toDomain(existingOrder.get(), existingOrderItems);
+        }
+
         var toBeSavedOrderJpa = OrderMapper.toJpa(order);
         var savedOrderJpa = orderJpaRepository.save(toBeSavedOrderJpa);
 
@@ -47,12 +54,18 @@ public class OrderPersistenceAdapter implements
 
     @Override
     public Order updateOrder(Order order) {
+        // 멱등성을 위해 동일한 guid를 가진 주문이 존재하는지 확인
+        var existingOrder = orderJpaRepository.findByGuid(order.getGuid().value());
+        if (existingOrder.isEmpty()) {
+            throw new IllegalArgumentException("Order with guid " + order.getGuid().value() + " does not exist");
+        }
+
         var toBeUpdatedOrder = OrderMapper.toJpa(order);
         var toBeUpdatedOrderItems = OrderItemMapper.toJpaMap(order.getOrderItems());
 
-        var UpdatedOrder = orderJpaRepository.save(toBeUpdatedOrder);
-        var UpdatedOrderItems = orderItemJpaRepository.saveAll(toBeUpdatedOrderItems);
+        var updatedOrder = orderJpaRepository.save(toBeUpdatedOrder);
+        var updatedOrderItems = orderItemJpaRepository.saveAll(toBeUpdatedOrderItems);
 
-        return OrderMapper.toDomain(UpdatedOrder, UpdatedOrderItems);
+        return OrderMapper.toDomain(updatedOrder, updatedOrderItems);
     }
 }
