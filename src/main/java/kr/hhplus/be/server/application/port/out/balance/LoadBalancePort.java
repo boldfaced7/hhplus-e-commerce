@@ -7,4 +7,6 @@ import java.util.Optional;
 
 public interface LoadBalancePort {
     Optional<Balance> loadBalance(UserId userId);
+    Optional<Balance> loadBalanceForUpdate(UserId userId);
+
 }
