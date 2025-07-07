@@ -1,6 +1,5 @@
 package kr.hhplus.be.server.domain.model;
 
-import kr.hhplus.be.server.domain.event.DomainEvent;
 import kr.hhplus.be.server.domain.event.coupon.CouponUseCancelled;
 import kr.hhplus.be.server.domain.event.coupon.CouponUseFailed;
 import kr.hhplus.be.server.domain.exception.CouponAlreadyUsedException;
@@ -8,6 +7,7 @@ import kr.hhplus.be.server.domain.exception.CouponUnavailableException;
 import kr.hhplus.be.server.domain.vo.coupon.CouponDiscountRate;
 import kr.hhplus.be.server.domain.vo.coupon.CouponId;
 import kr.hhplus.be.server.domain.vo.coupon.CouponUsed;
+import kr.hhplus.be.server.domain.vo.order.Guid;
 import kr.hhplus.be.server.domain.vo.user.UserId;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -73,24 +73,24 @@ public class Coupon extends EventDomain {
         );
     }
 
-    public Coupon use() {
+    public void use(Guid guid) {
         checkCouponAvailable();
 
         if (this.used.equals(CouponUsed.USED)) {
+            markCouponUseFailed(guid);
             throw new CouponAlreadyUsedException(couponId);
         }
         this.used = CouponUsed.USED;
         this.usedAt = LocalDateTime.now();
-
-        return this;
+        markCouponUsed(guid);
     }
 
-    public Coupon restore() {
+    public void restore(Guid guid) {
         checkCouponAvailable();
 
         this.used = CouponUsed.NOT_USED;
         this.usedAt = issuedAt;
-        return this;
+        markCouponUseCancelled(guid);
     }
 
     public boolean isCouponUnavailable() {
@@ -109,16 +109,16 @@ public class Coupon extends EventDomain {
         consumer.accept(this);
     }
 
-    public void markCouponUsed(DomainEvent event) {
-        addEvent(new kr.hhplus.be.server.domain.event.coupon.CouponUsed(event));
+    private void markCouponUsed(Guid guid) {
+        addEvent(new kr.hhplus.be.server.domain.event.coupon.CouponUsed(guid, couponId));
     }
 
-    public void markCouponUseFailed(DomainEvent event) {
-        addEvent(new CouponUseFailed(event));
+    private void markCouponUseFailed(Guid guid) {
+        addEvent(new CouponUseFailed(guid, couponId));
     }
 
-    public void markCouponUseCancelled(DomainEvent event) {
-        addEvent(new CouponUseCancelled(event));
+    private void markCouponUseCancelled(Guid guid) {
+        addEvent(new CouponUseCancelled(guid, couponId));
     }
 
 

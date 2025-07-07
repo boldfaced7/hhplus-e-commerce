@@ -3,10 +3,10 @@ package kr.hhplus.be.server.domain.model;
 import kr.hhplus.be.server.domain.event.order.OrderCreated;
 import kr.hhplus.be.server.domain.event.order.OrderFailed;
 import kr.hhplus.be.server.domain.event.order.OrderPlaced;
-import kr.hhplus.be.server.domain.vo.order.Guid;
 import kr.hhplus.be.server.domain.vo.coupon.CouponDiscountRate;
 import kr.hhplus.be.server.domain.vo.coupon.CouponId;
 import kr.hhplus.be.server.domain.vo.order.*;
+import kr.hhplus.be.server.domain.vo.orderitem.OrderItemQuantities;
 import kr.hhplus.be.server.domain.vo.orderitem.OrderItemQuantity;
 import kr.hhplus.be.server.domain.vo.product.ProductId;
 import kr.hhplus.be.server.domain.vo.product.ProductPrice;
@@ -51,7 +51,7 @@ public class Order extends EventDomain {
                 orderItemQuantities,
                 productPrices
         );
-        return new Order(
+        var order = new Order(
                 null,
                 guid,
                 userId,
@@ -64,6 +64,8 @@ public class Order extends EventDomain {
                 LocalDateTime.now(),
                 LocalDateTime.now()
         );
+        order.markOrderCreated();
+        return order;
     }
 
     public static Order create(
@@ -94,7 +96,6 @@ public class Order extends EventDomain {
         );
     }
 
-
     public boolean isFinished() {
         return orderFinished.value();
     }
@@ -103,59 +104,48 @@ public class Order extends EventDomain {
         return orderSucceeded.value();
     }
 
-    public Map<ProductId, OrderItemQuantity> getOrderItemQuantities() {
-        return orderItems.values().stream()
+    public OrderItemQuantities getOrderItemQuantities() {
+        var map = orderItems.values().stream()
                 .collect(Collectors.toMap(
                         OrderItem::getProductId,
                         OrderItem::getQuantity
                 ));
+        return new OrderItemQuantities(map);
     }
 
     public Collection<ProductId> getProductIds() {
         return orderItems.keySet();
     }
 
-    public Order complete(OrderSucceeded isSucceeded) {
+    public void complete(OrderSucceeded isSucceeded) {
         this.orderFinished = new OrderFinished(true);
         this.orderSucceeded = isSucceeded;
         this.updatedAt = LocalDateTime.now();
 
-        return this;
+        if (isSucceeded()) {
+            markOrderPlaced();
+        } else {
+            markOrderFailed();
+        }
     }
 
     public void markOrderCreated() {
         addEvent(new OrderCreated(
+                guid,
                 orderId,
-                couponId,
                 userId,
-                getProductIds(),
+                couponId,
                 discountTotalPrice,
                 getOrderItemQuantities()
         ));
     }
 
-    public void markOrderFailed() {
-        addEvent(new OrderFailed(
-                orderId,
-                couponId,
-                userId,
-                discountTotalPrice,
-                getOrderItemQuantities(),
-                getProductIds()
-        ));
-
+    private void markOrderFailed() {
+        addEvent(new OrderFailed(guid, orderId));
     }
 
-    public void markOrderPlaced() {
-        addEvent(new OrderPlaced(
-                orderId,
-                couponId,
-                userId,
-                discountTotalPrice,
-                getOrderItemQuantities(),
-                getProductIds()
-        ));
-
+    private void markOrderPlaced() {
+        addEvent(new OrderPlaced(guid, orderId));
     }
 
     public void apply(Consumer<Order> consumer) {

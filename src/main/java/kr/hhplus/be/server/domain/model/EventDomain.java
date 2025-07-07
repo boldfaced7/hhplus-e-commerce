@@ -3,6 +3,7 @@ package kr.hhplus.be.server.domain.model;
 import kr.hhplus.be.server.domain.event.DomainEvent;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 public class EventDomain {
@@ -18,4 +19,9 @@ public class EventDomain {
     public void addEvent(DomainEvent event) {
         events.add(event);
     }
+
+    public void addEvents(Collection<DomainEvent> events) {
+        this.events.addAll(events);
+    }
+
 }
