@@ -25,6 +25,12 @@ public class PlaceOrderEventHandlerForTest {
 
     private final OrchestratePlaceOrderSagaUseCase placeOrderSagaOrchestrator;
 
+    @EventListener
+    public void saveContext(OrderCreated event) {
+        logEvent(event);
+        placeOrderSagaOrchestrator.saveContext(event);
+    }
+
     /*
      * 주문 생성 -> 쿠폰 사용
      */

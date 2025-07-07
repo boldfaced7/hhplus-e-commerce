@@ -1,7 +1,14 @@
 package kr.hhplus.be.server.application.service;
 
-import kr.hhplus.be.server.domain.event.DomainEvent;
-import kr.hhplus.be.server.domain.event.product.StockDeductionCancelled;
+import kr.hhplus.be.server.application.port.in.PlaceOrderCommand;
+import kr.hhplus.be.server.application.service.saga.PlaceOrderSagaContext;
+import kr.hhplus.be.server.application.service.saga.balance.CancelBalanceDeductionCommand;
+import kr.hhplus.be.server.application.service.saga.balance.DeductBalanceCommand;
+import kr.hhplus.be.server.application.service.saga.coupon.CancelCouponUseCommand;
+import kr.hhplus.be.server.application.service.saga.coupon.UseCouponCommand;
+import kr.hhplus.be.server.application.service.saga.product.CancelStockDeductionCommand;
+import kr.hhplus.be.server.application.service.saga.product.DeductStockCommand;
+import kr.hhplus.be.server.application.service.saga.order.CompleteOrderCommand;
 import kr.hhplus.be.server.domain.vo.order.Guid;
 import kr.hhplus.be.server.domain.vo.balance.BalanceAmount;
 import kr.hhplus.be.server.domain.vo.balance.BalanceId;
@@ -9,12 +16,14 @@ import kr.hhplus.be.server.domain.vo.coupon.CouponDiscountRate;
 import kr.hhplus.be.server.domain.vo.coupon.CouponId;
 import kr.hhplus.be.server.domain.vo.coupon.CouponUsed;
 import kr.hhplus.be.server.domain.vo.order.*;
+import kr.hhplus.be.server.domain.vo.orderitem.OrderItemQuantities;
 import kr.hhplus.be.server.domain.vo.orderitem.OrderItemQuantity;
 import kr.hhplus.be.server.domain.vo.product.ProductId;
 import kr.hhplus.be.server.domain.vo.product.ProductName;
 import kr.hhplus.be.server.domain.vo.product.ProductPrice;
 import kr.hhplus.be.server.domain.vo.product.ProductStock;
 import kr.hhplus.be.server.domain.vo.user.UserId;
+
 
 import java.util.List;
 import java.util.Map;
@@ -62,16 +71,57 @@ public class TestConstants {
     public static final ProductId PRODUCT_ID = new ProductId(1L);
     public static final BalanceId BALANCE_ID = new BalanceId(1L);
 
-    public static final Map<ProductId, OrderItemQuantity> ORDER_ITEM_QUANTITIES = Map.of(PRODUCT_ID, QUANTITY);
+    public static final OrderItemQuantities ORDER_ITEM_QUANTITIES = new OrderItemQuantities(Map.of(PRODUCT_ID, QUANTITY));
     public static final List<ProductId> PRODUCT_IDS = List.of(PRODUCT_ID);
 
-
-    public static final DomainEvent EVENT = new StockDeductionCancelled(
+    public static final PlaceOrderSagaContext CONTEXT = PlaceOrderSagaContext.create(
+            GUID,
             ORDER_ID,
-            COUPON_ID,
             USER_ID,
+            COUPON_ID,
             ORDER_DISCOUNT_PRICE,
-            ORDER_ITEM_QUANTITIES,
-            PRODUCT_IDS
+            ORDER_ITEM_QUANTITIES
+    );
+
+    public static final PlaceOrderCommand PLACE_ORDER_COMMAND = new PlaceOrderCommand(
+            GUID,
+            USER_ID,
+            COUPON_ID,
+            Map.of(PRODUCT_ID, QUANTITY)
+    );
+
+
+    public static final CancelBalanceDeductionCommand CANCEL_BALANCE_DEDUCTION_COMMAND = new CancelBalanceDeductionCommand(
+            GUID,
+            USER_ID,
+            ORDER_DISCOUNT_PRICE
+    );
+    public static final DeductBalanceCommand DEDUCT_BALANCE_COMMAND = new DeductBalanceCommand(
+            GUID,
+            USER_ID,
+            ORDER_DISCOUNT_PRICE
+    );
+
+    public static final CancelCouponUseCommand CANCEL_COUPON_USE_COMMAND = new CancelCouponUseCommand(
+            GUID,
+            COUPON_ID
+    );
+    public static final UseCouponCommand USE_COUPON_COMMAND = new UseCouponCommand(
+            GUID,
+            COUPON_ID
+    );
+
+    public static final DeductStockCommand DEDUCT_STOCK_COMMAND = new DeductStockCommand(
+            GUID,
+            ORDER_ITEM_QUANTITIES
+    );
+    public static final CancelStockDeductionCommand CANCEL_STOCK_DEDUCTION_COMMAND = new CancelStockDeductionCommand(
+            GUID,
+            ORDER_ITEM_QUANTITIES
+    );
+
+    public static final CompleteOrderCommand COMPLETE_ORDER_COMMAND = new CompleteOrderCommand(
+            GUID,
+            ORDER_ID
     );
 }

@@ -3,7 +3,7 @@ package kr.hhplus.be.server.application.service;
 import kr.hhplus.be.server.application.port.in.ChargeBalanceCommand;
 import kr.hhplus.be.server.application.port.out.balance.SaveBalancePort;
 import kr.hhplus.be.server.domain.model.Balance;
-import kr.hhplus.be.server.application.support.TestContainerSupport;
+import kr.hhplus.be.server.application.support.IntegrationTestSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,7 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import static kr.hhplus.be.server.application.service.TestConstants.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
-class ChargeBalanceServiceIntegrationTest extends TestContainerSupport {
+class ChargeBalanceServiceIntegrationTest extends IntegrationTestSupport {
     @Autowired ChargeBalanceService chargeBalanceService;
 
     @Autowired SaveBalancePort saveBalancePort;

@@ -1,23 +1,14 @@
 package kr.hhplus.be.server.application.service.saga;
 
-import kr.hhplus.be.server.adapter.out.persistence.balance.BalanceJpaRepository;
-import kr.hhplus.be.server.adapter.out.persistence.balance.BalancePersistenceAdapter;
-import kr.hhplus.be.server.adapter.out.persistence.coupon.CouponJpaRepository;
-import kr.hhplus.be.server.adapter.out.persistence.coupon.CouponPersistenceAdapter;
-import kr.hhplus.be.server.adapter.out.persistence.order.OrderJpaRepository;
-import kr.hhplus.be.server.adapter.out.persistence.order.OrderPersistenceAdapter;
-import kr.hhplus.be.server.adapter.out.persistence.orderitem.OrderItemJpaRepository;
-import kr.hhplus.be.server.adapter.out.persistence.product.ProductJpaRepository;
-import kr.hhplus.be.server.adapter.out.persistence.product.ProductPersistenceAdapter;
 import kr.hhplus.be.server.application.port.in.PlaceOrderCommand;
 import kr.hhplus.be.server.application.port.in.PlaceOrderUseCase;
+import kr.hhplus.be.server.application.support.IntegrationTestSupport;
 import kr.hhplus.be.server.domain.model.Balance;
 import kr.hhplus.be.server.domain.model.Coupon;
 import kr.hhplus.be.server.domain.model.Product;
 import kr.hhplus.be.server.domain.vo.order.Guid;
 import kr.hhplus.be.server.domain.vo.product.ProductId;
 import kr.hhplus.be.server.domain.vo.user.UserId;
-import kr.hhplus.be.server.application.support.TestContainerSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.awaitility.Awaitility;
 import org.awaitility.core.ThrowingRunnable;
@@ -42,20 +33,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Slf4j
 @SpringBootTest
 @ActiveProfiles("integration-test")
-class PlaceOrderSagaConcurrencyTest extends TestContainerSupport {
+class PlaceOrderSagaConcurrencyTest extends IntegrationTestSupport {
 
     @Autowired PlaceOrderUseCase placeOrderUseCase;
-
-    @Autowired OrderPersistenceAdapter orderPersistenceAdapter;
-    @Autowired BalancePersistenceAdapter balancePersistenceAdapter;
-    @Autowired CouponPersistenceAdapter couponPersistenceAdapter;
-    @Autowired ProductPersistenceAdapter productPersistenceAdapter;
-
-    @Autowired BalanceJpaRepository balanceJpaRepository;
-    @Autowired CouponJpaRepository couponJpaRepository;
-    @Autowired OrderJpaRepository orderJpaRepository;
-    @Autowired OrderItemJpaRepository orderItemJpaRepository;
-    @Autowired ProductJpaRepository productJpaRepository;
 
     private ProductId productId;
 
@@ -68,12 +48,8 @@ class PlaceOrderSagaConcurrencyTest extends TestContainerSupport {
     }
 
     @AfterEach
-    void clearRepository() {
-        balanceJpaRepository.deleteAll();
-        couponJpaRepository.deleteAll();
-        orderJpaRepository.deleteAll();
-        orderItemJpaRepository.deleteAll();
-        productJpaRepository.deleteAll();
+    void afterEach() {
+        clearRepository();
     }
 
     @Test

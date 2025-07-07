@@ -6,6 +6,7 @@ import kr.hhplus.be.server.domain.vo.coupon.CouponUsed;
 import kr.hhplus.be.server.domain.vo.product.ProductStock;
 import org.awaitility.Awaitility;
 import org.awaitility.core.ThrowingRunnable;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -23,6 +24,30 @@ public class SagaTestUtils {
                 .atMost(Duration.ofSeconds(2))
                 .untilAsserted(runnable);
     }
+
+    public static Order setUpOrder() {
+        var order = Order.create(
+                ORDER_ID,
+                GUID,
+                USER_ID,
+                COUPON_ID,
+                Map.of(PRODUCT_ID, OrderItem.create(
+                        PRODUCT_ID,
+                        QUANTITY,
+                        PRODUCT_PRICE,
+                        COUPON_DISCOUNT_RATE
+                )),
+                ORDER_ORIGINAL_PRICE,
+                ORDER_DISCOUNT_PRICE,
+                ORDER_NOT_FINISHED,
+                ORDER_FAILED,
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
+        ReflectionTestUtils.invokeMethod(order, "markOrderCreated");
+        return order;
+    }
+
 
     public static Coupon setUpCoupon(CouponUsed couponUsed) {
         return Coupon.create(

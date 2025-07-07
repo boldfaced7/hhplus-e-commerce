@@ -1,16 +1,8 @@
 package kr.hhplus.be.server.application.service.saga;
 
-import kr.hhplus.be.server.adapter.out.persistence.balance.BalanceJpaRepository;
-import kr.hhplus.be.server.adapter.out.persistence.balance.BalancePersistenceAdapter;
-import kr.hhplus.be.server.adapter.out.persistence.coupon.CouponJpaRepository;
-import kr.hhplus.be.server.adapter.out.persistence.coupon.CouponPersistenceAdapter;
-import kr.hhplus.be.server.adapter.out.persistence.order.OrderJpaRepository;
-import kr.hhplus.be.server.adapter.out.persistence.order.OrderPersistenceAdapter;
-import kr.hhplus.be.server.adapter.out.persistence.orderitem.OrderItemJpaRepository;
-import kr.hhplus.be.server.adapter.out.persistence.product.ProductJpaRepository;
-import kr.hhplus.be.server.adapter.out.persistence.product.ProductPersistenceAdapter;
 import kr.hhplus.be.server.application.port.in.PlaceOrderCommand;
 import kr.hhplus.be.server.application.port.in.PlaceOrderUseCase;
+import kr.hhplus.be.server.application.support.IntegrationTestSupport;
 import kr.hhplus.be.server.domain.model.Balance;
 import kr.hhplus.be.server.domain.model.Coupon;
 import kr.hhplus.be.server.domain.model.Product;
@@ -22,9 +14,8 @@ import kr.hhplus.be.server.domain.vo.order.OrderId;
 import kr.hhplus.be.server.domain.vo.order.OrderSucceeded;
 import kr.hhplus.be.server.domain.vo.product.ProductId;
 import kr.hhplus.be.server.domain.vo.product.ProductStock;
-import kr.hhplus.be.server.application.support.TestContainerSupport;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,20 +31,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Slf4j
 @SpringBootTest
 @ActiveProfiles("integration-test")
-class PlaceOrderSagaIntegrationTest extends TestContainerSupport {
+class PlaceOrderSagaIntegrationTest extends IntegrationTestSupport {
 
     @Autowired PlaceOrderUseCase placeOrderUseCase;
-
-    @Autowired OrderPersistenceAdapter orderPersistenceAdapter;
-    @Autowired BalancePersistenceAdapter balancePersistenceAdapter;
-    @Autowired CouponPersistenceAdapter couponPersistenceAdapter;
-    @Autowired ProductPersistenceAdapter productPersistenceAdapter;
-
-    @Autowired BalanceJpaRepository balanceJpaRepository;
-    @Autowired CouponJpaRepository couponJpaRepository;
-    @Autowired OrderJpaRepository orderJpaRepository;
-    @Autowired OrderItemJpaRepository orderItemJpaRepository;
-    @Autowired ProductJpaRepository productJpaRepository;
 
     PlaceOrderCommand command;
 
@@ -65,13 +45,9 @@ class PlaceOrderSagaIntegrationTest extends TestContainerSupport {
 
     Balance balance;
 
-    @BeforeEach
-    void setUp() {
-        balanceJpaRepository.deleteAll();
-        couponJpaRepository.deleteAll();
-        orderJpaRepository.deleteAll();
-        orderItemJpaRepository.deleteAll();
-        productJpaRepository.deleteAll();
+    @AfterEach
+    void afterEach() {
+        clearRepository();
     }
 
     @Test

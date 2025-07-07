@@ -3,36 +3,56 @@ package kr.hhplus.be.server.application.service.saga.coupon;
 import kr.hhplus.be.server.application.service.saga.coupon.impl.UseCouponServiceImpl;
 import kr.hhplus.be.server.domain.model.Coupon;
 import kr.hhplus.be.server.application.support.ApplicationUnitTestSupport;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static kr.hhplus.be.server.application.service.TestConstants.*;
 import static kr.hhplus.be.server.application.service.saga.SagaTestUtils.setUpCoupon;
 import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class UseCouponServiceTest extends ApplicationUnitTestSupport {
 
     @InjectMocks UseCouponServiceImpl useCouponService;
 
-    @MethodSource
-    @ParameterizedTest(name = "[쿠폰 사용] {0}")
-    void 쿠폰_사용(String message, Coupon coupon, boolean isSucceeded) {
-        stubCouponUse(coupon, isSucceeded);   // given
-        useCouponService.useCoupon(EVENT);    // when
-        verifyCouponUse(coupon, isSucceeded); // then
+    @Test
+    void 쿠폰_사용_성공() {
+        // given
+        Coupon coupon = spy(setUpCoupon(COUPON_NOT_USED));
+        stubCouponUse(coupon, true);
+        
+        // when
+        useCouponService.useCoupon(USE_COUPON_COMMAND);
+        
+        // then
+        verifyCouponUse(coupon, true);
     }
 
-    static Stream<Arguments> 쿠폰_사용() {
-        return Stream.of(
-                Arguments.of("성공", spy(setUpCoupon(COUPON_NOT_USED)), true),
-                Arguments.of("실패", spy(setUpCoupon(COUPON_USED)), false),
-                Arguments.of("쿠폰 조회 실패", null, false)
-        );
+    @Test
+    void 쿠폰_사용_실패() {
+        // given
+        Coupon coupon = spy(setUpCoupon(COUPON_USED));
+        stubCouponUse(coupon, false);
+        
+        // when & then
+        assertThatThrownBy(() -> {
+            useCouponService.useCoupon(USE_COUPON_COMMAND);
+        }).isInstanceOf(RuntimeException.class);
+        verifyCouponUse(coupon, false);
+    }
+
+    @Test
+    void 쿠폰_조회_실패() {
+        // given
+        stubCouponUse(null, false);
+        
+        // when & then
+        assertThatThrownBy(() -> {
+            useCouponService.useCoupon(USE_COUPON_COMMAND);
+        }).isInstanceOf(RuntimeException.class);
+        verifyCouponUse(null, false);
     }
 
     void stubCouponUse(Coupon coupon, boolean isSucceeded) {
@@ -47,20 +67,16 @@ class UseCouponServiceTest extends ApplicationUnitTestSupport {
     }
 
     void verifyCouponUse(Coupon coupon, boolean isSucceeded) {
-        int success = isSucceeded ? 1 : 0;
-        int failure = isSucceeded ? 0 : 1;
-
         verify(loadCouponPort).loadCouponForUpdate(COUPON_ID);
-        if (coupon != null) {
-            // 쿠폰 사용
-            verify(coupon).use();
-            // 쿠폰 사용 성공 이벤트 생성
-            verify(coupon, times(success)).markCouponUsed(EVENT);
-            // 쿠폰 사용 실패 이벤트 생성
-            verify(coupon, times(failure)).markCouponUseFailed(EVENT);
+        if (coupon == null) return;
+
+        // 쿠폰 사용
+        verify(coupon).use(GUID);
+
+        if (isSucceeded) {
+            // 쿠폰 사용 업데이트
+            verify(updateCouponPort).updateCoupon(coupon);
         }
-        // 쿠폰 사용 업데이트
-        verify(updateCouponPort, times(success)).updateCoupon(coupon);
         // 이벤트 발행
         verify(publishEventPort).publishEvents(any(Coupon.class));
     }
