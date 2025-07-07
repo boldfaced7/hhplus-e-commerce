@@ -6,7 +6,7 @@ import kr.hhplus.be.server.domain.model.Product;
 import kr.hhplus.be.server.domain.vo.product.ProductName;
 import kr.hhplus.be.server.domain.vo.product.ProductPrice;
 import kr.hhplus.be.server.domain.vo.product.ProductStock;
-import kr.hhplus.be.server.application.support.TestContainerSupport;
+import kr.hhplus.be.server.application.support.IntegrationTestSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +14,7 @@ import org.springframework.data.domain.Pageable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class ListProductServiceIntegrationTest extends TestContainerSupport {
+class ListProductServiceIntegrationTest extends IntegrationTestSupport {
 
     @Autowired ListProductService listProductService;
     @Autowired SaveProductPort saveProductPort;

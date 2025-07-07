@@ -1,9 +1,12 @@
 package kr.hhplus.be.server.application.service.saga;
 
-import kr.hhplus.be.server.application.port.in.PlaceOrderCommand;
+import kr.hhplus.be.server.adapter.aop.DistributedLockAspect;
+import kr.hhplus.be.server.adapter.config.RedissonConfig;
 import kr.hhplus.be.server.application.port.in.PlaceOrderUseCase;
 import kr.hhplus.be.server.application.port.out.balance.LoadBalancePort;
 import kr.hhplus.be.server.application.port.out.balance.UpdateBalancePort;
+import kr.hhplus.be.server.application.port.out.context.LoadPlaceOrderSagaContextPort;
+import kr.hhplus.be.server.application.port.out.context.SavePlaceOrderSagaContextPort;
 import kr.hhplus.be.server.application.port.out.coupon.LoadCouponPort;
 import kr.hhplus.be.server.application.port.out.coupon.UpdateCouponPort;
 import kr.hhplus.be.server.application.port.out.order.LoadOrderPort;
@@ -12,22 +15,25 @@ import kr.hhplus.be.server.application.port.out.order.UpdateOrderPort;
 import kr.hhplus.be.server.application.port.out.product.ListProductPort;
 import kr.hhplus.be.server.application.port.out.product.LoadProductsPort;
 import kr.hhplus.be.server.application.port.out.product.UpdateProductsPort;
-import kr.hhplus.be.server.domain.model.*;
+import kr.hhplus.be.server.domain.model.Balance;
+import kr.hhplus.be.server.domain.model.Coupon;
+import kr.hhplus.be.server.domain.model.Order;
+import kr.hhplus.be.server.domain.model.Products;
 import kr.hhplus.be.server.domain.vo.balance.BalanceAmount;
 import kr.hhplus.be.server.domain.vo.coupon.CouponUsed;
 import kr.hhplus.be.server.domain.vo.order.OrderId;
 import kr.hhplus.be.server.domain.vo.product.ProductStock;
 import lombok.extern.slf4j.Slf4j;
+import org.aspectj.lang.ProceedingJoinPoint;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.Optional;
 
 import static kr.hhplus.be.server.application.service.TestConstants.*;
@@ -37,62 +43,59 @@ import static org.mockito.Mockito.*;
 @Slf4j
 @SpringBootTest
 @ActiveProfiles("application-test")
+@EnableAutoConfiguration(exclude = {
+        // Redis 관련
+        org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration.class,
+        org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration.class
+})
 class PlaceOrderSagaApplicationTest {
 
     @Autowired PlaceOrderUseCase placeOrderUseCase;
 
-    @MockitoBean LoadCouponPort loadCouponPort;
-    @MockitoBean UpdateCouponPort updateCouponPort;
+    @MockitoBean RedissonConfig redissonConfig;
+    @MockitoBean DistributedLockAspect distributedLockAspect;
 
     @MockitoBean LoadBalancePort loadBalancePort;
     @MockitoBean UpdateBalancePort updateBalancePort;
 
-    @MockitoBean LoadProductsPort loadProductsPort;
-    @MockitoBean ListProductPort listProductPort;
-    @MockitoBean UpdateProductsPort updateProductsPort;
+    @MockitoBean LoadPlaceOrderSagaContextPort loadPlaceOrderSagaContextPort;
+    @MockitoBean SavePlaceOrderSagaContextPort savePlaceOrderSagaContextPort;
+
+    @MockitoBean LoadCouponPort loadCouponPort;
+    @MockitoBean UpdateCouponPort updateCouponPort;
 
     @MockitoBean SaveOrderPort saveOrderPort;
     @MockitoBean LoadOrderPort loadOrderPort;
     @MockitoBean UpdateOrderPort updateOrderPort;
 
-    final PlaceOrderCommand command = new PlaceOrderCommand(
-            GUID,
-            USER_ID,
-            COUPON_ID,
-            Map.of(PRODUCT_ID, QUANTITY)
-    );
+    @MockitoBean LoadProductsPort loadProductsPort;
+    @MockitoBean ListProductPort listProductPort;
+    @MockitoBean UpdateProductsPort updateProductsPort;
 
-    final Order order = Order.create(
-            ORDER_ID,
-            GUID,
-            USER_ID,
-            COUPON_ID,
-            Map.of(PRODUCT_ID, OrderItem.create(
-                    PRODUCT_ID,
-                    QUANTITY,
-                    PRODUCT_PRICE,
-                    COUPON_DISCOUNT_RATE
-            )),
-            ORDER_ORIGINAL_PRICE,
-            ORDER_DISCOUNT_PRICE,
-            ORDER_NOT_FINISHED,
-            ORDER_FAILED,
-            LocalDateTime.now(),
-            LocalDateTime.now()
-    );
-
+    Order order;
     Products products;
     Coupon coupon;
     Balance balance;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Throwable {
         clearInvocations(
                 loadCouponPort,   updateCouponPort,
                 loadBalancePort,  updateBalancePort,
                 loadProductsPort, updateProductsPort, listProductPort,
                 loadOrderPort ,   updateOrderPort,    saveOrderPort
         );
+
+        when(loadPlaceOrderSagaContextPort.loadByGuid(GUID))
+                .thenReturn(Optional.of(CONTEXT));
+
+        doAnswer(invocation ->
+                ((ProceedingJoinPoint) invocation.getArgument(0)).proceed()
+        ).when(distributedLockAspect).lock(any());
+
+        doAnswer(invocation ->
+                ((ProceedingJoinPoint) invocation.getArgument(0)).proceed()
+        ).when(distributedLockAspect).multiLock(any());
     }
     
     @Test
@@ -108,7 +111,7 @@ class PlaceOrderSagaApplicationTest {
         stubOrderForCompletion();            // (5) 주문 성공 완료 stubbing
 
         // when
-        Order result = placeOrderUseCase.placeOrder(command);
+        Order result = placeOrderUseCase.placeOrder(PLACE_ORDER_COMMAND);
         
         // then
         SagaTestUtils.verifySaga(result, () -> {
@@ -131,7 +134,7 @@ class PlaceOrderSagaApplicationTest {
         stubOrderForCompletion(); // (3) 주문 실패 완료 stubbing
 
         // when
-        Order result = placeOrderUseCase.placeOrder(command);
+        Order result = placeOrderUseCase.placeOrder(PLACE_ORDER_COMMAND);
         
         // then
         SagaTestUtils.verifySaga(result, () -> {
@@ -153,7 +156,7 @@ class PlaceOrderSagaApplicationTest {
         stubOrderForCompletion();       // (5) 주문 실패 완료 stubbing
 
         // when
-        Order result = placeOrderUseCase.placeOrder(command);
+        Order result = placeOrderUseCase.placeOrder(PLACE_ORDER_COMMAND);
         
         // then
         SagaTestUtils.verifySaga(result, () -> {
@@ -177,7 +180,7 @@ class PlaceOrderSagaApplicationTest {
         stubOrderForCompletion();             // (7) 주문 실패 완료 stubbing
 
         // when
-        Order result = placeOrderUseCase.placeOrder(command);
+        Order result = placeOrderUseCase.placeOrder(PLACE_ORDER_COMMAND);
         
         // then
         SagaTestUtils.verifySaga(result, () -> {
@@ -258,6 +261,7 @@ class PlaceOrderSagaApplicationTest {
 
 
     void setUpTestData(CouponUsed couponUsed, BalanceAmount balanceAmount, ProductStock productStock) {
+        order = SagaTestUtils.setUpOrder();
         coupon   = SagaTestUtils.setUpCoupon(couponUsed);
         balance  = SagaTestUtils.setUpBalance(balanceAmount);
         products = SagaTestUtils.setUpProducts(productStock);

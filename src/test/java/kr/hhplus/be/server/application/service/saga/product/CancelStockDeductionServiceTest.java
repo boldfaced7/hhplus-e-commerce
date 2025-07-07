@@ -1,46 +1,56 @@
 package kr.hhplus.be.server.application.service.saga.product;
 
 import kr.hhplus.be.server.application.service.saga.product.impl.CancelStockDeductionServiceImpl;
+import kr.hhplus.be.server.application.support.ApplicationUnitTestSupport;
 import kr.hhplus.be.server.domain.model.Product;
 import kr.hhplus.be.server.domain.model.Products;
 import kr.hhplus.be.server.domain.vo.product.ProductId;
-import kr.hhplus.be.server.application.support.ApplicationUnitTestSupport;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 
+import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Stream;
 
 import static kr.hhplus.be.server.application.service.TestConstants.*;
 import static kr.hhplus.be.server.application.service.saga.SagaTestUtils.setUpProducts;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 class CancelStockDeductionServiceTest extends ApplicationUnitTestSupport {
 
     @InjectMocks CancelStockDeductionServiceImpl cancelStockDeductionService;
 
-    @MethodSource
-    @ParameterizedTest(name = "[재고 차감 취소] {0}")
-    void 재고_차감_취소(String message, Products products, boolean isSucceeded) {
-        stubCancelStockDeduction(products, isSucceeded);         // given
-        cancelStockDeductionService.cancelStockDeduction(EVENT); // when
-        verifyCancelStockDeduction(products, isSucceeded);       // then
+    @Test
+    void 재고_차감_취소_성공() {
+        // given
+        Products products = spy(setUpProducts(PRODUCT_STOCK_DEDUCTED));
+        stubCancelStockDeduction(products, true);
+        
+        // when
+        cancelStockDeductionService.cancelStockDeduction(CANCEL_STOCK_DEDUCTION_COMMAND);
+        
+        // then
+        verifyCancelStockDeduction(products, true);
     }
 
-    static Stream<Arguments> 재고_차감_취소() {
-        Map<ProductId, Product> products = new java.util.HashMap<>();
-        products.put(PRODUCT_ID, null);
-        return Stream.of(
-                Arguments.of("성공", spy(setUpProducts(PRODUCT_STOCK_DEDUCTED)), true),
-                Arguments.of("실패", spy(Products.create(products)), false)
-        );
+    @Test
+    void 재고_차감_취소_실패() {
+        // given
+        Map<ProductId, Product> productMap = new HashMap<>();
+        productMap.put(PRODUCT_ID, null);
+        Products products = spy(Products.create(productMap));
+        stubCancelStockDeduction(products, false);
+
+        // when & then
+        assertThatThrownBy(() -> {
+            cancelStockDeductionService.cancelStockDeduction(CANCEL_STOCK_DEDUCTION_COMMAND);
+        }).isInstanceOf(RuntimeException.class);
+        verifyCancelStockDeduction(products, false);
     }
 
     void stubCancelStockDeduction(Products products, boolean isSucceeded) {
         // 재고 조회
-        when(loadProductsPort.loadProductsForUpdate(PRODUCT_IDS)).thenReturn(products);
+        when(loadProductsPort.loadProductsForUpdate(anyCollection())).thenReturn(products);
         if (isSucceeded) {
             // 재고 차감 취소 업데이트
             when(updateProductsPort.updateProducts(products)).thenReturn(products);
@@ -50,19 +60,15 @@ class CancelStockDeductionServiceTest extends ApplicationUnitTestSupport {
     }
 
     void verifyCancelStockDeduction(Products products, boolean isSucceeded) {
-        int times = isSucceeded ? 1 : 0;
-
         // 재고 조회
-        verify(loadProductsPort).loadProductsForUpdate(PRODUCT_IDS);
-        if (products.hasAllProducts()) {
-            // 재고 차감 취소
-            verify(products).addAll(ORDER_ITEM_QUANTITIES);
-            // 이벤트 생성
-            verify(products).markStockDeductionCancelled(EVENT);
-        }
+        verify(loadProductsPort).loadProductsForUpdate(anyCollection());
+        if (!products.hasAllProducts()) return;
+
+        // 재고 차감 취소
+        verify(products).restoreAll(GUID, ORDER_ITEM_QUANTITIES);
         // 재고 차감 취소 업데이트
-        verify(updateProductsPort, times(times)).updateProducts(products);
+        verify(updateProductsPort).updateProducts(products);
         // 이벤트 발행
-        verify(publishEventPort, times(times)).publishEvents(products);
+        verify(publishEventPort).publishEvents(any(Products.class));
     }
 }

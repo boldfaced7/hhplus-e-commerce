@@ -1,11 +1,11 @@
 package kr.hhplus.be.server.domain.model;
 
-import kr.hhplus.be.server.domain.event.DomainEvent;
 import kr.hhplus.be.server.domain.event.product.StockDeducted;
 import kr.hhplus.be.server.domain.event.product.StockDeductionCancelled;
 import kr.hhplus.be.server.domain.event.product.StockDeductionFailed;
 import kr.hhplus.be.server.domain.exception.ProductNotFoundException;
-import kr.hhplus.be.server.domain.vo.orderitem.OrderItemQuantity;
+import kr.hhplus.be.server.domain.vo.order.Guid;
+import kr.hhplus.be.server.domain.vo.orderitem.OrderItemQuantities;
 import kr.hhplus.be.server.domain.vo.product.ProductId;
 import kr.hhplus.be.server.domain.vo.product.ProductPrice;
 import lombok.AccessLevel;
@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 @Getter
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class Products extends EventDomain {
+
     private Map<ProductId, Product> products;
 
     public static Products create(Map<ProductId, Product> products) {
@@ -40,21 +41,27 @@ public class Products extends EventDomain {
         return products.get(productId);
     }
 
-    public Products addAll(Map<ProductId, OrderItemQuantity> orderItemQuantities) {
+    public void restoreAll(Guid guid, OrderItemQuantities quantities) {
         checkAllProductExistence();
-        orderItemQuantities.forEach((productId, orderItemQuantity) -> {
+        quantities.forEach((productId, orderItemQuantity) -> {
             products.get(productId).add(orderItemQuantity);
         });
-        return this;
+        markStockDeductionCancelled(guid, quantities);
     }
 
-    public Products deductAll(Map<ProductId, OrderItemQuantity> orderItemQuantities) {
+    public void deductAll(Guid guid, OrderItemQuantities quantities) {
         checkAllProductExistence();
-        orderItemQuantities.forEach((productId, orderItemQuantity) -> {
-            products.get(productId).deduct(orderItemQuantity);
-        });
-        return this;
+        try {
+            quantities.forEach((productId, orderItemQuantity) -> {
+                products.get(productId).deduct(orderItemQuantity);
+            });
+            markStockDeducted(guid, quantities);
+        } catch (Exception e) {
+            markStockDeductionFailed(guid, quantities);
+            throw e;
+        }
     }
+
 
     public void checkAllProductExistence() {
         if (!hasAllProducts()) {
@@ -75,16 +82,16 @@ public class Products extends EventDomain {
         }
     }
 
-    public void markStockDeducted(DomainEvent event) {
-        addEvent(new StockDeducted(event));
+    private void markStockDeducted(Guid guid, OrderItemQuantities quantities) {
+        addEvent(new StockDeducted(guid, quantities));
     }
 
-    public void markStockDeductionFailed(DomainEvent event) {
-        addEvent(new StockDeductionFailed(event));
+    private void markStockDeductionFailed(Guid guid, OrderItemQuantities quantities) {
+        addEvent(new StockDeductionFailed(guid, quantities));
     }
 
-    public void markStockDeductionCancelled(DomainEvent event) {
-        addEvent(new StockDeductionCancelled(event));
+    private void markStockDeductionCancelled(Guid guid, OrderItemQuantities quantities) {
+        addEvent(new StockDeductionCancelled(guid, quantities));
     }
 
 }

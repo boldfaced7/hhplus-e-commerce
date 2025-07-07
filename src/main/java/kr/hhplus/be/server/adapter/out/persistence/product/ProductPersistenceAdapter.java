@@ -33,7 +33,6 @@ public class ProductPersistenceAdapter implements
         return productJpaRepository.findAll(pageable).map(ProductMapper::toDomain);
     }
 
-
     @Override
     public Products loadProductsForUpdate(Collection<ProductId> productIds) {
         return loadProducts(productIds, productJpaRepository::listProductsForUpdate);

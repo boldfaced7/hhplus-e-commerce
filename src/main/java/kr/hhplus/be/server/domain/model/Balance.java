@@ -1,12 +1,12 @@
 package kr.hhplus.be.server.domain.model;
 
-import kr.hhplus.be.server.domain.event.DomainEvent;
 import kr.hhplus.be.server.domain.event.balance.BalanceDeducted;
 import kr.hhplus.be.server.domain.event.balance.BalanceDeductionCancelled;
 import kr.hhplus.be.server.domain.event.balance.BalanceDeductionFailed;
 import kr.hhplus.be.server.domain.exception.BalanceUnavailableException;
 import kr.hhplus.be.server.domain.vo.balance.BalanceAmount;
 import kr.hhplus.be.server.domain.vo.balance.BalanceId;
+import kr.hhplus.be.server.domain.vo.order.Guid;
 import kr.hhplus.be.server.domain.vo.order.OrderDiscountTotalPrice;
 import kr.hhplus.be.server.domain.vo.user.UserId;
 import lombok.AccessLevel;
@@ -73,25 +73,30 @@ public class Balance extends EventDomain {
         return this;
     }
 
-    public Balance charge(OrderDiscountTotalPrice price) {
+    public void restore(Guid guid, OrderDiscountTotalPrice price) {
         checkBalanceAvailable();
         this.amount = this.amount.add(price);
-        return this;
+        markBalanceDeductionCancelled(guid, price);
     }
 
-    public Balance deduct(OrderDiscountTotalPrice price) {
+    public void deduct(Guid guid, OrderDiscountTotalPrice price) {
         checkBalanceAvailable();
-        this.amount = this.amount.subtract(price);
-        return this;
+        try {
+            this.amount = this.amount.subtract(price);
+            markBalanceDeducted(guid, price);
+        } catch (Exception e) {
+            markBalanceDeductionFailed(guid, price);
+            throw e;
+        }
     }
 
-    public void checkBalanceAvailable() {
+    private void checkBalanceAvailable() {
         if (isBalanceUnavailable()) {
             throw new BalanceUnavailableException();
         }
     }
 
-    public boolean isBalanceUnavailable() {
+    private boolean isBalanceUnavailable() {
         return balanceId == null && userId == null && amount == null &&
                 createdAt == LocalDateTime.MAX && updatedAt == LocalDateTime.MAX;
     }
@@ -100,16 +105,16 @@ public class Balance extends EventDomain {
         consumer.accept(this);
     }
 
-    public void markBalanceDeducted(DomainEvent event) {
-        addEvent(new BalanceDeducted(event));
+    private void markBalanceDeducted(Guid guid, OrderDiscountTotalPrice price) {
+        addEvent(new BalanceDeducted(guid, price));
     }
 
-    public void markBalanceDeductionFailed(DomainEvent event) {
-        addEvent(new BalanceDeductionFailed(event));
+    private void markBalanceDeductionFailed(Guid guid, OrderDiscountTotalPrice price) {
+        addEvent(new BalanceDeductionFailed(guid, price));
     }
 
-    public void markBalanceDeductionCancelled(DomainEvent event) {
-        addEvent(new BalanceDeductionCancelled(event));
+    private void markBalanceDeductionCancelled(Guid guid, OrderDiscountTotalPrice price) {
+        addEvent(new BalanceDeductionCancelled(guid, price));
     }
 
 }

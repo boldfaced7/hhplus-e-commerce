@@ -1,11 +1,14 @@
 package kr.hhplus.be.server.application.service.saga.product.impl;
 
+import kr.hhplus.be.server.application.port.aop.DistributedMultiLock;
 import kr.hhplus.be.server.application.port.out.event.PublishEventPort;
 import kr.hhplus.be.server.application.port.out.product.LoadProductsPort;
 import kr.hhplus.be.server.application.port.out.product.UpdateProductsPort;
+import kr.hhplus.be.server.application.service.saga.product.CancelStockDeductionCommand;
 import kr.hhplus.be.server.application.service.saga.product.CancelStockDeductionService;
-import kr.hhplus.be.server.domain.event.DomainEvent;
 import kr.hhplus.be.server.domain.model.Products;
+import kr.hhplus.be.server.domain.vo.order.Guid;
+import kr.hhplus.be.server.domain.vo.orderitem.OrderItemQuantities;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -20,18 +23,19 @@ public class CancelStockDeductionServiceImpl implements CancelStockDeductionServ
     private final UpdateProductsPort updateProductsPort;
 
     @Override
+    @DistributedMultiLock(prefix = "product:lock:", keys = "#command.productIds()")
     @Transactional(isolation = Isolation.REPEATABLE_READ)
-    public void cancelStockDeduction(DomainEvent event) {
-        loadProductsPort.loadProductsForUpdate(event.productIds())
-                .apply(products -> cancelStockDeduction(products, event));
+    public void cancelStockDeduction(CancelStockDeductionCommand command) {
+        Products loaded = loadProductsPort.loadProductsForUpdate(command.productIds());
+        cancelStockDeduction(loaded, command.guid(), command.quantities());
     }
 
-    private void cancelStockDeduction(Products products, DomainEvent event) {
-        var cancelled = products.addAll(event.orderItemQuantities()); // 모든 제품 재고 차감 취소
-        cancelled.markStockDeductionCancelled(event);                 // 재고 차감됨 이벤트 생성
-
-        updateProductsPort.updateProducts(cancelled);                 // 제품 업데이트
-        publishEventPort.publishEvents(cancelled);                    // 이벤트 발행
+    private void cancelStockDeduction(Products products, Guid guid, OrderItemQuantities quantities) {
+        products.restoreAll(guid, quantities); // 모든 제품 재고 차감 취소
+        updateProductsPort.updateProducts(products); // 제품 업데이트
+        publishEventPort.publishEvents(products); // 이벤트 발행
     }
+
+
 
 }

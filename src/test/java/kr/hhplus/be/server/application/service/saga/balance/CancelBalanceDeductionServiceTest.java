@@ -3,35 +3,43 @@ package kr.hhplus.be.server.application.service.saga.balance;
 import kr.hhplus.be.server.application.service.saga.balance.impl.CancelBalanceDeductionServiceImpl;
 import kr.hhplus.be.server.domain.model.Balance;
 import kr.hhplus.be.server.application.support.ApplicationUnitTestSupport;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static kr.hhplus.be.server.application.service.TestConstants.*;
 import static kr.hhplus.be.server.application.service.saga.SagaTestUtils.setUpBalance;
 import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class CancelBalanceDeductionServiceTest extends ApplicationUnitTestSupport {
 
     @InjectMocks CancelBalanceDeductionServiceImpl cancelBalanceDeductionService;
 
-    @MethodSource
-    @ParameterizedTest(name = "[잔액 차감 취소] {0}")
-    void 잔액_차감_취소(String message, Balance balance, boolean isSucceeded) {
-        stubBalanceDeductionCancel(balance, isSucceeded);            // given
-        cancelBalanceDeductionService.cancelBalanceDeduction(EVENT); // when
-        verifyBalanceDeductionCancel(balance, isSucceeded);          // then
+    @Test
+    void 잔액_차감_취소_성공() {
+        // given
+        Balance balance = spy(setUpBalance(BALANCE_AMOUNT_DEDUCTED));
+        stubBalanceDeductionCancel(balance, true);
+        
+        // when
+        cancelBalanceDeductionService.cancelBalanceDeduction(CANCEL_BALANCE_DEDUCTION_COMMAND);
+        
+        // then
+        verifyBalanceDeductionCancel(balance, true);
     }
 
-    static Stream<Arguments> 잔액_차감_취소() {
-        return Stream.of(
-                Arguments.of("성공", spy(setUpBalance(BALANCE_AMOUNT_DEDUCTED)), true),
-                Arguments.of("실패", null, false)
-        );
+    @Test
+    void 잔액_차감_취소_실패() {
+        // given
+        stubBalanceDeductionCancel(null, false);
+        
+        // when & then
+        assertThatThrownBy(() -> {
+            cancelBalanceDeductionService.cancelBalanceDeduction(CANCEL_BALANCE_DEDUCTION_COMMAND);
+        }).isInstanceOf(RuntimeException.class);
+        verifyBalanceDeductionCancel(null, false);
     }
 
     void stubBalanceDeductionCancel(Balance balance, boolean isSucceeded) {
@@ -46,20 +54,17 @@ class CancelBalanceDeductionServiceTest extends ApplicationUnitTestSupport {
     }
 
     void verifyBalanceDeductionCancel(Balance balance, boolean isSucceeded) {
-        int times = isSucceeded ? 1 : 0;
-
         // 잔액 조회
         verify(loadBalancePort).loadBalanceForUpdate(USER_ID);
-        if (balance != null) {
-            // 잔액 차감 취소
-            verify(balance).charge(ORDER_DISCOUNT_PRICE);
-            // 이벤트 생성
-            verify(balance).markBalanceDeductionCancelled(EVENT);
-        }
+
+        if (balance == null) return;
+
+        // 잔액 차감 취소
+        verify(balance).restore(GUID, ORDER_DISCOUNT_PRICE);
         // 잔액 차감 취소 업데이트
-        verify(updateBalancePort, times(times)).updateBalance(balance);
+        verify(updateBalancePort).updateBalance(balance);
         // 이벤트 발행
-        verify(publishEventPort, times(times)).publishEvents(any(Balance.class));
+        verify(publishEventPort).publishEvents(any(Balance.class));
     }
 
 }

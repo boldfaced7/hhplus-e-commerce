@@ -3,39 +3,47 @@ package kr.hhplus.be.server.application.service.saga.product;
 import kr.hhplus.be.server.application.service.saga.product.impl.DeductStockServiceImpl;
 import kr.hhplus.be.server.domain.model.Products;
 import kr.hhplus.be.server.application.support.ApplicationUnitTestSupport;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
-
-import java.util.stream.Stream;
 
 import static kr.hhplus.be.server.application.service.TestConstants.*;
 import static kr.hhplus.be.server.application.service.saga.SagaTestUtils.setUpProducts;
 import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class DeductStockServiceTest extends ApplicationUnitTestSupport {
 
     @InjectMocks DeductStockServiceImpl deductStockService;
 
-    @MethodSource
-    @ParameterizedTest(name = "[재고 차감] {0}")
-    void 재고_차감(String message, Products products, boolean isSucceeded) {
-        stubDeductStock(products, isSucceeded);   // given
-        deductStockService.deductStock(EVENT);    // when
-        verifyDeductStock(products, isSucceeded); // then
+    @Test
+    void 재고_차감_성공() {
+        // given
+        Products products = spy(setUpProducts(PRODUCT_STOCK));
+        stubDeductStock(products, true);
+        
+        // when
+        deductStockService.deductStock(DEDUCT_STOCK_COMMAND);
+        
+        // then
+        verifyDeductStock(products, true);
     }
 
-    static Stream<Arguments> 재고_차감() {
-        return Stream.of(
-                Arguments.of("성공", spy(setUpProducts(PRODUCT_STOCK)), true),
-                Arguments.of("실패", spy(setUpProducts(PRODUCT_STOCK_INSUFFICIENT)), false)
-        );
+    @Test
+    void 재고_차감_실패() {
+        // given
+        Products products = spy(setUpProducts(PRODUCT_STOCK_INSUFFICIENT));
+        stubDeductStock(products, false);
+        
+        // when & then
+        assertThatThrownBy(() -> {
+            deductStockService.deductStock(DEDUCT_STOCK_COMMAND);
+        }).isInstanceOf(RuntimeException.class);
+        verifyDeductStock(products, false);
     }
 
     void stubDeductStock(Products products, boolean isSucceeded) {
         // 재고 조회
-        when(loadProductsPort.loadProductsForUpdate(PRODUCT_IDS)).thenReturn(products);
+        when(loadProductsPort.loadProductsForUpdate(anyCollection())).thenReturn(products);
         if (isSucceeded) {
             // 재고 차감 업데이트
             when(updateProductsPort.updateProducts(products)).thenReturn(products);
@@ -45,21 +53,17 @@ class DeductStockServiceTest extends ApplicationUnitTestSupport {
     }
 
     void verifyDeductStock(Products products, boolean isSucceeded) {
-        int success = isSucceeded ? 1 : 0;
-        int failure = isSucceeded ? 0 : 1;
-
         // 재고 조회
-        verify(loadProductsPort).loadProductsForUpdate(PRODUCT_IDS);
-        if (products != null) {
-            // 재고 차감
-            verify(products).deductAll(ORDER_ITEM_QUANTITIES);
-            // 재고 차감 성공 이벤트 생성
-            verify(products, times(success)).markStockDeducted(EVENT);
-            // 재고 차감 실패 이벤트 생성
-            verify(products, times(failure)).markStockDeductionFailed(EVENT);
+        verify(loadProductsPort).loadProductsForUpdate(anyCollection());
+        if (products == null) return;
+
+        // 재고 차감
+        verify(products).deductAll(GUID, ORDER_ITEM_QUANTITIES);
+
+        if (isSucceeded) {
+            // 재고 차감 업데이트
+            verify(updateProductsPort).updateProducts(products);
         }
-        // 재고 차감 업데이트
-        verify(updateProductsPort, times(success)).updateProducts(products);
         // 이벤트 발행
         verify(publishEventPort).publishEvents(any(Products.class));
     }
