@@ -25,6 +25,12 @@ public class PlaceOrderSagaEventHandler {
 
     private final OrchestratePlaceOrderSagaUseCase placeOrderSagaOrchestrator;
 
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void saveContext(OrderCreated event) {
+        placeOrderSagaOrchestrator.saveContext(event);
+    }
+
     /*
      * 주문 생성 -> 쿠폰 사용
      */

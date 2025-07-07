@@ -8,10 +8,12 @@ import kr.hhplus.be.server.application.port.out.order.UpdateOrderPort;
 import kr.hhplus.be.server.domain.model.Order;
 import kr.hhplus.be.server.domain.vo.order.OrderId;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class OrderPersistenceAdapter implements
@@ -32,40 +34,31 @@ public class OrderPersistenceAdapter implements
 
     @Override
     public Order saveOrder(Order order) {
-        // 멱등성을 위해 동일한 guid를 가진 주문이 이미 존재하는지 확인
-        var existingOrder = orderJpaRepository.findByGuid(order.getGuid().value());
-        if (existingOrder.isPresent()) {
-            // 이미 존재하는 주문의 OrderItems도 함께 조회
-            var existingOrderItems = orderItemJpaRepository.loadOrderItems(existingOrder.get().getId());
-            return OrderMapper.toDomain(existingOrder.get(), existingOrderItems);
-        }
-
-        var toBeSavedOrderJpa = OrderMapper.toJpa(order);
-        var savedOrderJpa = orderJpaRepository.save(toBeSavedOrderJpa);
-
-        var toBeSavedOrderItemsJpa = OrderItemMapper.toJpaMap(order.getOrderItems());
-        toBeSavedOrderItemsJpa.values().forEach(orderItem ->
-                orderItem.setOrderId(savedOrderJpa.getId())
-        );
-        var savedOrderItemsJpa = orderItemJpaRepository.saveAll(toBeSavedOrderItemsJpa);
-
-        return OrderMapper.toDomain(savedOrderJpa, savedOrderItemsJpa);
+        var saved = persistOrder(order);
+        saved.markOrderCreated();
+//        var pulled = order.pullEvents();
+//        log.info("{}", pulled);
+//        saved.addEvents(pulled);
+        return saved;
     }
 
     @Override
     public Order updateOrder(Order order) {
-        // 멱등성을 위해 동일한 guid를 가진 주문이 존재하는지 확인
-        var existingOrder = orderJpaRepository.findByGuid(order.getGuid().value());
-        if (existingOrder.isEmpty()) {
-            throw new IllegalArgumentException("Order with guid " + order.getGuid().value() + " does not exist");
-        }
+        return persistOrder(order);
+    }
 
-        var toBeUpdatedOrder = OrderMapper.toJpa(order);
-        var toBeUpdatedOrderItems = OrderItemMapper.toJpaMap(order.getOrderItems());
+    private Order persistOrder(Order order) {
+//        var existingOrder = orderJpaRepository.findByGuid(order.getGuid().value());
+//        if (existingOrder.isEmpty()) {
+//            throw new IllegalArgumentException("Order with guid " + order.getGuid().value() + " does not exist");
+//        }
+//
+        var toBePersistedOrder = OrderMapper.toJpa(order);
+        var toBePersistedOrderItems = OrderItemMapper.toJpaMap(order.getOrderItems());
 
-        var updatedOrder = orderJpaRepository.save(toBeUpdatedOrder);
-        var updatedOrderItems = orderItemJpaRepository.saveAll(toBeUpdatedOrderItems);
+        var persistedOrder = orderJpaRepository.save(toBePersistedOrder);
+        var persistedOrderItems = orderItemJpaRepository.saveAll(toBePersistedOrderItems);
 
-        return OrderMapper.toDomain(updatedOrder, updatedOrderItems);
+        return OrderMapper.toDomain(persistedOrder, persistedOrderItems);
     }
 }
