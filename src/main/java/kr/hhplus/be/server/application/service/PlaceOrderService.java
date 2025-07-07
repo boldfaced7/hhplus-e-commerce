@@ -62,9 +62,7 @@ public class PlaceOrderService implements PlaceOrderUseCase {
                 coupon.getDiscountRate()
         );
         var saved = saveOrderPort.saveOrder(toBeSaved);
-        saved.markOrderCreated();
         publishEventPort.publishEvents(saved);
-
         return saved;
     }
 

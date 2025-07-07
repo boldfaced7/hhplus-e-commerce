@@ -1,18 +1,19 @@
 package kr.hhplus.be.server.application.service.saga.balance.impl;
 
+import kr.hhplus.be.server.application.port.aop.DistributedLock;
 import kr.hhplus.be.server.application.port.out.balance.LoadBalancePort;
 import kr.hhplus.be.server.application.port.out.balance.UpdateBalancePort;
 import kr.hhplus.be.server.application.port.out.event.PublishEventPort;
+import kr.hhplus.be.server.application.service.saga.balance.DeductBalanceCommand;
 import kr.hhplus.be.server.application.service.saga.balance.DeductBalanceService;
-import kr.hhplus.be.server.domain.event.DomainEvent;
 import kr.hhplus.be.server.domain.model.Balance;
+import kr.hhplus.be.server.domain.vo.order.Guid;
+import kr.hhplus.be.server.domain.vo.order.OrderDiscountTotalPrice;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DeductBalanceServiceImpl implements DeductBalanceService {
@@ -22,24 +23,23 @@ public class DeductBalanceServiceImpl implements DeductBalanceService {
     private final UpdateBalancePort updateBalancePort;
 
     @Override
+    @DistributedLock(prefix = "balance:lock:", key = "#command.userId")
     @Transactional(isolation = Isolation.REPEATABLE_READ)
-    public void deductBalance(DomainEvent event) {
-        loadBalancePort.loadBalanceForUpdate(event.userId())
-                .orElse(Balance.unavailable()) // 조회 결과가 없는 경우, 사용 불가 잔액 사용
-                .apply(balance -> deductBalance(balance, event));
+    public void deductBalance(DeductBalanceCommand command) {
+        var loaded = loadBalancePort.loadBalanceForUpdate(command.userId())
+                .orElse(Balance.unavailable()); // 조회 결과가 없는 경우, 사용 불가 잔액 사용
+
+        deductBalance(loaded, command.guid(), command.price());
     }
 
-    private void deductBalance(Balance balance, DomainEvent event) {
+    private void deductBalance(Balance balance, Guid guid, OrderDiscountTotalPrice price) {
         try {
-            balance.deduct(event.orderDiscountTotalPrice()); // 잔액 차감, 실패 시 예외 발생
-            balance.markBalanceDeducted(event); // 잔액 차감 성공 이벤트 생성
+            balance.deduct(guid, price); // 잔액 차감, 실패 시 예외 발생
             updateBalancePort.updateBalance(balance); // 잔액 업데이트
 
-        } catch (Exception e) {
-            log.error(e.getMessage(), e);
-            balance.markBalanceDeductionFailed(event); // 잔액 차감 실패 이벤트 생성
+        } finally {
+            publishEventPort.publishEvents(balance); // 이벤트 발행
         }
-        publishEventPort.publishEvents(balance); // 이벤트 발행
     }
 
 }
