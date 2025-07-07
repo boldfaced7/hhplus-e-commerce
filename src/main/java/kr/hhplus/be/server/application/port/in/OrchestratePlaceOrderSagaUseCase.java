@@ -31,6 +31,14 @@ public interface OrchestratePlaceOrderSagaUseCase {
 
     /**
      * 주문 생성 이벤트 처리
+     * 주문이 생성되면 주문 생성 사가 컨텍스트를 저장합니다.
+     *
+     * @param event 주문 생성 이벤트
+     */
+    void saveContext(OrderCreated event);
+
+    /**
+     * 주문 생성 이벤트 처리
      * 주문이 생성되면 쿠폰 사용 프로세스를 시작합니다.
      * 
      * @param event 주문 생성 이벤트
