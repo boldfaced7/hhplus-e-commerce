@@ -6,20 +6,19 @@ import kr.hhplus.be.server.domain.event.balance.BalanceDeductionFailed;
 import kr.hhplus.be.server.domain.exception.BalanceUnavailableException;
 import kr.hhplus.be.server.domain.vo.balance.BalanceAmount;
 import kr.hhplus.be.server.domain.vo.balance.BalanceId;
-import kr.hhplus.be.server.domain.vo.order.Guid;
 import kr.hhplus.be.server.domain.vo.order.OrderDiscountTotalPrice;
 import kr.hhplus.be.server.domain.vo.user.UserId;
-import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.ToString;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 @ToString
 @Getter
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@AllArgsConstructor
 public class Balance extends EventDomain {
 
     private BalanceId balanceId;
@@ -51,41 +50,25 @@ public class Balance extends EventDomain {
         );
     }
 
-    public static Balance create(
-            BalanceId balanceId,
-            UserId userId,
-            BalanceAmount amount,
-            LocalDateTime createdAt,
-            LocalDateTime updatedAt
-    ) {
-        return new Balance(
-                balanceId,
-                userId,
-                amount,
-                createdAt,
-                updatedAt
-        );
-    }
-
     public Balance charge(BalanceAmount amount) {
         checkBalanceAvailable();
         this.amount = this.amount.add(amount);
         return this;
     }
 
-    public void restore(Guid guid, OrderDiscountTotalPrice price) {
+    public void restore(UUID uuid, OrderDiscountTotalPrice price) {
         checkBalanceAvailable();
         this.amount = this.amount.add(price);
-        markBalanceDeductionCancelled(guid, price);
+        markBalanceDeductionCancelled(uuid, price);
     }
 
-    public void deduct(Guid guid, OrderDiscountTotalPrice price) {
+    public void deduct(UUID uuid, OrderDiscountTotalPrice price) {
         checkBalanceAvailable();
         try {
             this.amount = this.amount.subtract(price);
-            markBalanceDeducted(guid, price);
+            markBalanceDeducted(uuid, price);
         } catch (Exception e) {
-            markBalanceDeductionFailed(guid, price);
+            markBalanceDeductionFailed(uuid, price);
             throw e;
         }
     }
@@ -105,16 +88,16 @@ public class Balance extends EventDomain {
         consumer.accept(this);
     }
 
-    private void markBalanceDeducted(Guid guid, OrderDiscountTotalPrice price) {
-        addEvent(new BalanceDeducted(guid, price));
+    private void markBalanceDeducted(UUID uuid, OrderDiscountTotalPrice price) {
+        addEvent(new BalanceDeducted(uuid, price));
     }
 
-    private void markBalanceDeductionFailed(Guid guid, OrderDiscountTotalPrice price) {
-        addEvent(new BalanceDeductionFailed(guid, price));
+    private void markBalanceDeductionFailed(UUID uuid, OrderDiscountTotalPrice price) {
+        addEvent(new BalanceDeductionFailed(uuid, price));
     }
 
-    private void markBalanceDeductionCancelled(Guid guid, OrderDiscountTotalPrice price) {
-        addEvent(new BalanceDeductionCancelled(guid, price));
+    private void markBalanceDeductionCancelled(UUID uuid, OrderDiscountTotalPrice price) {
+        addEvent(new BalanceDeductionCancelled(uuid, price));
     }
 
 }

@@ -6,7 +6,6 @@ import kr.hhplus.be.server.domain.vo.product.ProductId;
 import kr.hhplus.be.server.domain.vo.product.ProductName;
 import kr.hhplus.be.server.domain.vo.product.ProductPrice;
 import kr.hhplus.be.server.domain.vo.product.ProductStock;
-import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.ToString;
@@ -15,7 +14,7 @@ import java.time.LocalDateTime;
 
 @ToString
 @Getter
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@AllArgsConstructor
 public class Product extends EventDomain {
 
     private ProductId productId;
@@ -48,24 +47,6 @@ public class Product extends EventDomain {
                 stock,
                 LocalDateTime.now(),
                 LocalDateTime.now()
-        );
-    }
-
-    public static Product create(
-            ProductId productId,
-            ProductName name,
-            ProductPrice price,
-            ProductStock stock,
-            LocalDateTime createdAt,
-            LocalDateTime updatedAt
-    ) {
-        return new Product(
-                productId,
-                name,
-                price,
-                stock,
-                createdAt,
-                updatedAt
         );
     }
 
