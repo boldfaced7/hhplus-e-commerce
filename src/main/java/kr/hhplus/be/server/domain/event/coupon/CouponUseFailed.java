@@ -2,9 +2,10 @@ package kr.hhplus.be.server.domain.event.coupon;
 
 import kr.hhplus.be.server.domain.event.DomainEvent;
 import kr.hhplus.be.server.domain.vo.coupon.CouponId;
-import kr.hhplus.be.server.domain.vo.order.Guid;
+
+import java.util.UUID;
 
 public record CouponUseFailed(
-        Guid guid,
+        UUID uuid,
         CouponId couponId
 ) implements DomainEvent {}
