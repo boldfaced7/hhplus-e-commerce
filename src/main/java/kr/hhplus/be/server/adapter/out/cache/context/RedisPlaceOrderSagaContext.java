@@ -15,7 +15,7 @@ import java.util.Map;
 public class RedisPlaceOrderSagaContext {
 
     @Id
-    private Long guid;
+    private String uuid;
     private Long orderId;
     private Long userId;
     private Long couponId;

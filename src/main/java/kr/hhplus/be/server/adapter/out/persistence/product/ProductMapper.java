@@ -24,7 +24,7 @@ public class ProductMapper {
     }
 
     public static Product toDomain(ProductJpa productJpa) {
-        return Product.create(
+        return new Product(
             new ProductId(productJpa.getId()),
             new ProductName(productJpa.getName()),
             new ProductPrice(productJpa.getPrice()),

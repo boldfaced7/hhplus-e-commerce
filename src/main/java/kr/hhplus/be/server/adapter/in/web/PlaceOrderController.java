@@ -4,9 +4,7 @@ import kr.hhplus.be.server.application.port.in.PlaceOrderCommand;
 import kr.hhplus.be.server.application.port.in.PlaceOrderUseCase;
 import kr.hhplus.be.server.domain.model.Order;
 import kr.hhplus.be.server.domain.vo.coupon.CouponId;
-import kr.hhplus.be.server.domain.vo.order.Guid;
-import kr.hhplus.be.server.domain.vo.orderitem.OrderItemQuantity;
-import kr.hhplus.be.server.domain.vo.product.ProductId;
+import kr.hhplus.be.server.domain.vo.orderitem.OrderItemQuantities;
 import kr.hhplus.be.server.domain.vo.user.UserId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/orders")
@@ -35,17 +33,11 @@ public class PlaceOrderController {
     }
 
     private PlaceOrderCommand toCommand(Request request) {
-        Map<ProductId, OrderItemQuantity> orderItemQuantities = request.orderItems().entrySet().stream()
-                .collect(Collectors.toMap(
-                        entry -> new ProductId(entry.getKey()),
-                        entry -> new OrderItemQuantity(entry.getValue())
-                ));
-
         return new PlaceOrderCommand(
-                new Guid(request.guid()),
+                UUID.fromString(request.uuid()),
                 new UserId(request.userId()),
                 new CouponId(request.couponId()),
-                orderItemQuantities
+                OrderItemQuantities.create(request.orderItems)
         );
     }
 
@@ -58,7 +50,7 @@ public class PlaceOrderController {
     }
 
     public record Request(
-            Long guid,
+            String uuid,
             Long userId,
             Long couponId,
             Map<Long, Integer> orderItems

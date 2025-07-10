@@ -18,7 +18,7 @@ public class BalanceMapper {
     }
 
     public static Balance toDomain(BalanceJpa balanceJpa) {
-        return Balance.create(
+        return new Balance(
             new BalanceId(balanceJpa.getId()),
             new UserId(balanceJpa.getUserId()),
             new BalanceAmount(balanceJpa.getAmount()),

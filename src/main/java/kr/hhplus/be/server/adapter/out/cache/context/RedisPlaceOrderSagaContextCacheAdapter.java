@@ -8,9 +8,9 @@ import lombok.RequiredArgsConstructor;
 import kr.hhplus.be.server.application.port.out.context.LoadPlaceOrderSagaContextPort;
 import kr.hhplus.be.server.application.port.out.context.SavePlaceOrderSagaContextPort;
 import kr.hhplus.be.server.application.service.saga.PlaceOrderSagaContext;
-import kr.hhplus.be.server.domain.vo.order.Guid;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -22,8 +22,8 @@ public class RedisPlaceOrderSagaContextCacheAdapter implements
     private final RedisPlaceOrderSagaContextRepository repository;
 
     @Override
-    public Optional<PlaceOrderSagaContext> loadByGuid(Guid guid) {
-        return repository.findById(guid.value())
+    public Optional<PlaceOrderSagaContext> loadByUuid(UUID uuid) {
+        return repository.findById(uuid.toString())
                 .map(RedisPlaceOrderSagaContextMapper::toDomain);
     }
 

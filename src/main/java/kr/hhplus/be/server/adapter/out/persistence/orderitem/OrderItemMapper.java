@@ -1,6 +1,7 @@
 package kr.hhplus.be.server.adapter.out.persistence.orderitem;
 
 import kr.hhplus.be.server.domain.model.OrderItem;
+import kr.hhplus.be.server.domain.model.OrderItems;
 import kr.hhplus.be.server.domain.vo.order.OrderId;
 import kr.hhplus.be.server.domain.vo.orderitem.OrderItemDiscountPrice;
 import kr.hhplus.be.server.domain.vo.orderitem.OrderItemId;
@@ -27,7 +28,7 @@ public class OrderItemMapper {
     }
 
     public static OrderItem toDomain(OrderItemJpa orderItemJpa) {
-        return OrderItem.create(
+        return new OrderItem(
             new OrderItemId(orderItemJpa.getId()),
             new OrderId(orderItemJpa.getOrderId()),
             new ProductId(orderItemJpa.getProductId()),
@@ -39,20 +40,21 @@ public class OrderItemMapper {
         );
     }
 
-    public static Map<Long, OrderItemJpa> toJpaMap(Map<ProductId, OrderItem> orderItems) {
-        return orderItems.entrySet().stream()
+    public static Map<Long, OrderItemJpa> toJpaMap(OrderItems orderItems) {
+        return orderItems.stream()
             .collect(Collectors.toMap(
                 e -> e.getKey().value(),
                 e -> toJpa(e.getValue())
             ));
     }
 
-    public static Map<ProductId, OrderItem> toDomainMap(Map<Long, OrderItemJpa> orderItems) {
-        return orderItems.entrySet().stream()
+    public static OrderItems toDomains(Map<Long, OrderItemJpa> orderItems) {
+        Map<ProductId, OrderItem> collected = orderItems.entrySet().stream()
                 .collect(Collectors.toMap(
                         e -> new ProductId(e.getKey()),
                         e -> toDomain(e.getValue())
                 ));
+        return new OrderItems(collected);
     }
 
 }

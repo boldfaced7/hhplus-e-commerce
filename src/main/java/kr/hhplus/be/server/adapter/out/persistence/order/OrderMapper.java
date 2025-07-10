@@ -3,7 +3,6 @@ package kr.hhplus.be.server.adapter.out.persistence.order;
 import kr.hhplus.be.server.adapter.out.persistence.orderitem.OrderItemJpa;
 import kr.hhplus.be.server.adapter.out.persistence.orderitem.OrderItemMapper;
 import kr.hhplus.be.server.domain.model.Order;
-import kr.hhplus.be.server.domain.vo.order.Guid;
 import kr.hhplus.be.server.domain.vo.coupon.CouponId;
 import kr.hhplus.be.server.domain.vo.order.*;
 import kr.hhplus.be.server.domain.vo.user.UserId;
@@ -15,7 +14,7 @@ public class OrderMapper {
     public static OrderJpa toJpa(Order order) {
         return new OrderJpa(
             (order.getOrderId() != null) ? order.getOrderId().value() : null,
-            order.getGuid().value(),
+            order.getUuid(),
             order.getUserId().value(),
             order.getCouponId() != null ? order.getCouponId().value() : null,
             order.getOriginalTotalPrice().value(),
@@ -28,12 +27,12 @@ public class OrderMapper {
     }
 
     public static Order toDomain(OrderJpa orderJpa, Map<Long, OrderItemJpa> orderItems) {
-        return Order.create(
+        return new Order(
             new OrderId(orderJpa.getId()),
-            new Guid(orderJpa.getGuid()),
+            orderJpa.getUuid(),
             new UserId(orderJpa.getUserId()),
             orderJpa.getCouponId() != null ? new CouponId(orderJpa.getCouponId()) : null,
-            OrderItemMapper.toDomainMap(orderItems),
+            OrderItemMapper.toDomains(orderItems),
             new OrderOriginalTotalPrice(orderJpa.getOriginalTotalPrice()),
             new OrderDiscountTotalPrice(orderJpa.getDiscountTotalPrice()),
             new OrderFinished(orderJpa.isOrderFinished()),
