@@ -86,7 +86,7 @@ class PlaceOrderSagaApplicationTest {
                 loadOrderPort ,   updateOrderPort,    saveOrderPort
         );
 
-        when(loadPlaceOrderSagaContextPort.loadByGuid(GUID))
+        when(loadPlaceOrderSagaContextPort.loadByUuid(UUID_RANDOM))
                 .thenReturn(Optional.of(CONTEXT));
 
         doAnswer(invocation ->

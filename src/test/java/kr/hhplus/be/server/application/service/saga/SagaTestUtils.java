@@ -25,18 +25,32 @@ public class SagaTestUtils {
                 .untilAsserted(runnable);
     }
 
-    public static Order setUpOrder() {
-        var order = Order.create(
+    public static OrderItem setUpOrderItem() {
+        return new OrderItem(
+                ORDER_ITEM_ID,
                 ORDER_ID,
-                GUID,
+                PRODUCT_ID,
+                QUANTITY,
+                ORDER_ITEM_ORIGINAL_PRICE,
+                ORDER_ITEM_DISCOUNT_PRICE,
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
+    }
+
+    public static OrderItems setUpOrderItems() {
+        return new OrderItems(Map.of(
+                PRODUCT_ID, setUpOrderItem()
+        ));
+    }
+
+    public static Order setUpOrder() {
+        var order = new Order(
+                ORDER_ID,
+                UUID_RANDOM,
                 USER_ID,
                 COUPON_ID,
-                Map.of(PRODUCT_ID, OrderItem.create(
-                        PRODUCT_ID,
-                        QUANTITY,
-                        PRODUCT_PRICE,
-                        COUPON_DISCOUNT_RATE
-                )),
+                setUpOrderItems(),
                 ORDER_ORIGINAL_PRICE,
                 ORDER_DISCOUNT_PRICE,
                 ORDER_NOT_FINISHED,
@@ -50,7 +64,7 @@ public class SagaTestUtils {
 
 
     public static Coupon setUpCoupon(CouponUsed couponUsed) {
-        return Coupon.create(
+        return new Coupon(
                 COUPON_ID,
                 USER_ID,
                 COUPON_DISCOUNT_RATE,
@@ -62,7 +76,7 @@ public class SagaTestUtils {
 
 
     public static Balance setUpBalance(BalanceAmount balanceAmount) {
-        return Balance.create(
+        return new Balance(
                 BALANCE_ID,
                 USER_ID,
                 balanceAmount,
@@ -73,7 +87,7 @@ public class SagaTestUtils {
 
 
     public static Products setUpProducts(ProductStock productStock) {
-        return Products.create(Map.of(PRODUCT_ID, Product.create(
+        return Products.create(Map.of(PRODUCT_ID, new Product(
                 PRODUCT_ID,
                 PRODUCT_NAME,
                 PRODUCT_PRICE,

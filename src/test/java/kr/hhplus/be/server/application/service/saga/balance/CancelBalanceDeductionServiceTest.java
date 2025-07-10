@@ -42,10 +42,10 @@ class CancelBalanceDeductionServiceTest extends ApplicationUnitTestSupport {
         verifyBalanceDeductionCancel(null, false);
     }
 
-    void stubBalanceDeductionCancel(Balance balance, boolean isSucceeded) {
+    void stubBalanceDeductionCancel(Balance balance, boolean succeeded) {
         // 잔액 조회
         when(loadBalancePort.loadBalanceForUpdate(USER_ID)).thenReturn(Optional.ofNullable(balance));
-        if (isSucceeded) {
+        if (succeeded) {
             // 잔액 차감 취소 업데이트
             when(updateBalancePort.updateBalance(balance)).thenReturn(balance);
             // 이벤트 발행
@@ -53,18 +53,20 @@ class CancelBalanceDeductionServiceTest extends ApplicationUnitTestSupport {
         }
     }
 
-    void verifyBalanceDeductionCancel(Balance balance, boolean isSucceeded) {
+    void verifyBalanceDeductionCancel(Balance balance, boolean succeeded) {
         // 잔액 조회
         verify(loadBalancePort).loadBalanceForUpdate(USER_ID);
 
         if (balance == null) return;
 
-        // 잔액 차감 취소
-        verify(balance).restore(GUID, ORDER_DISCOUNT_PRICE);
-        // 잔액 차감 취소 업데이트
-        verify(updateBalancePort).updateBalance(balance);
-        // 이벤트 발행
-        verify(publishEventPort).publishEvents(any(Balance.class));
+        if (succeeded) {
+            // 잔액 차감 취소
+            verify(balance).restore(UUID_RANDOM, ORDER_DISCOUNT_PRICE);
+            // 잔액 차감 취소 업데이트
+            verify(updateBalancePort).updateBalance(balance);
+            // 이벤트 발행
+            verify(publishEventPort).publishEvents(any(Balance.class));
+        }
     }
 
 }

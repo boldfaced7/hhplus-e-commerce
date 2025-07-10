@@ -7,12 +7,13 @@ import kr.hhplus.be.server.application.port.out.event.PublishEventPort;
 import kr.hhplus.be.server.application.service.saga.coupon.UseCouponCommand;
 import kr.hhplus.be.server.application.service.saga.coupon.UseCouponService;
 import kr.hhplus.be.server.domain.model.Coupon;
-import kr.hhplus.be.server.domain.vo.order.Guid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -31,12 +32,12 @@ public class UseCouponServiceImpl implements UseCouponService {
                 .orElse(Coupon.unavailable()); // 조회 결과가 없는 경우, 사용 불가 쿠폰 사용
 
         log.info("{}", loaded);
-        useCoupon(loaded, command.guid());
+        useCoupon(loaded, command.uuid());
     }
 
-    private void useCoupon(Coupon coupon, Guid guid) {
+    private void useCoupon(Coupon coupon, UUID uuid) {
         try {
-            coupon.use(guid); // 쿠폰 사용, 실패 시 예외 발생
+            coupon.use(uuid); // 쿠폰 사용, 실패 시 예외 발생
             updateCouponPort.updateCoupon(coupon); // 쿠폰 업데이트
 
         } finally {

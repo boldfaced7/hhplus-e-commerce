@@ -8,11 +8,12 @@ import kr.hhplus.be.server.application.service.saga.coupon.CancelCouponUseComman
 import kr.hhplus.be.server.application.service.saga.coupon.CancelCouponUseService;
 import kr.hhplus.be.server.domain.exception.CouponNotFoundException;
 import kr.hhplus.be.server.domain.model.Coupon;
-import kr.hhplus.be.server.domain.vo.order.Guid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -29,11 +30,11 @@ public class CancelCouponUseServiceImpl implements CancelCouponUseService {
         var loaded = loadCouponPort.loadCouponForUpdate(command.couponId())
                 .orElseThrow(CouponNotFoundException::new);
 
-        cancelCouponUse(loaded, command.guid());
+        cancelCouponUse(loaded, command.uuid());
     }
 
-    private void cancelCouponUse(Coupon coupon, Guid guid) {
-        coupon.restore(guid); // 쿠폰 사용 취소
+    private void cancelCouponUse(Coupon coupon, UUID uuid) {
+        coupon.restore(uuid); // 쿠폰 사용 취소
         updateCouponPort.updateCoupon(coupon); // 쿠폰 업데이트
         publishEventPort.publishEvents(coupon); // 이벤트 발행
     }

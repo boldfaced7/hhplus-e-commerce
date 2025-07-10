@@ -6,7 +6,6 @@ import kr.hhplus.be.server.application.support.IntegrationTestSupport;
 import kr.hhplus.be.server.domain.model.Balance;
 import kr.hhplus.be.server.domain.model.Coupon;
 import kr.hhplus.be.server.domain.model.Product;
-import kr.hhplus.be.server.domain.vo.order.Guid;
 import kr.hhplus.be.server.domain.vo.product.ProductId;
 import kr.hhplus.be.server.domain.vo.user.UserId;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +20,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.Duration;
-import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -61,7 +60,7 @@ class PlaceOrderSagaConcurrencyTest extends IntegrationTestSupport {
 
         // then
         verify(() -> productJpaRepository.findById(productId.value())
-                .ifPresent(product -> assertThat(product.getStock()).isEqualTo(0)));
+                .ifPresent(product -> assertThat(product.getStock()).isZero()));
     }
 
     @Test
@@ -89,10 +88,10 @@ class PlaceOrderSagaConcurrencyTest extends IntegrationTestSupport {
         balancePersistenceAdapter.saveBalance(Balance.create(userId, BALANCE_AMOUNT));
 
         return new PlaceOrderCommand(
-                new Guid(System.currentTimeMillis()),
+                UUID.randomUUID(),
                 userId,
                 userCoupon.getCouponId(),
-                Map.of(productId, QUANTITY)
+                orderItemQuantities(productId)
         );
     }
 
@@ -103,10 +102,10 @@ class PlaceOrderSagaConcurrencyTest extends IntegrationTestSupport {
                 COUPON_NOT_USED
         ));
         return new PlaceOrderCommand(
-                new Guid(System.currentTimeMillis()),
+                UUID.randomUUID(),
                 USER_ID,
                 coupon.getCouponId(),
-                Map.of(productId, QUANTITY)
+                orderItemQuantities(productId)
         );
     }
 

@@ -54,7 +54,7 @@ public class PlaceOrderService implements PlaceOrderUseCase {
             Coupon coupon
     ) {
         var toBeSaved = Order.create(
-                command.guid(),
+                command.uuid(),
                 command.userId(),
                 command.couponId(),
                 command.orderItemQuantities(),

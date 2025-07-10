@@ -58,7 +58,7 @@ class DeductStockServiceTest extends ApplicationUnitTestSupport {
         if (products == null) return;
 
         // 재고 차감
-        verify(products).deductAll(GUID, ORDER_ITEM_QUANTITIES);
+        verify(products).deductAll(UUID_RANDOM, ORDER_ITEM_QUANTITIES);
 
         if (isSucceeded) {
             // 재고 차감 업데이트

@@ -6,27 +6,24 @@ import kr.hhplus.be.server.application.service.saga.balance.CancelBalanceDeducti
 import kr.hhplus.be.server.application.service.saga.balance.DeductBalanceCommand;
 import kr.hhplus.be.server.application.service.saga.coupon.CancelCouponUseCommand;
 import kr.hhplus.be.server.application.service.saga.coupon.UseCouponCommand;
+import kr.hhplus.be.server.application.service.saga.order.CompleteOrderCommand;
 import kr.hhplus.be.server.application.service.saga.product.CancelStockDeductionCommand;
 import kr.hhplus.be.server.application.service.saga.product.DeductStockCommand;
-import kr.hhplus.be.server.application.service.saga.order.CompleteOrderCommand;
-import kr.hhplus.be.server.domain.vo.order.Guid;
 import kr.hhplus.be.server.domain.vo.balance.BalanceAmount;
 import kr.hhplus.be.server.domain.vo.balance.BalanceId;
 import kr.hhplus.be.server.domain.vo.coupon.CouponDiscountRate;
 import kr.hhplus.be.server.domain.vo.coupon.CouponId;
 import kr.hhplus.be.server.domain.vo.coupon.CouponUsed;
 import kr.hhplus.be.server.domain.vo.order.*;
-import kr.hhplus.be.server.domain.vo.orderitem.OrderItemQuantities;
-import kr.hhplus.be.server.domain.vo.orderitem.OrderItemQuantity;
+import kr.hhplus.be.server.domain.vo.orderitem.*;
 import kr.hhplus.be.server.domain.vo.product.ProductId;
 import kr.hhplus.be.server.domain.vo.product.ProductName;
 import kr.hhplus.be.server.domain.vo.product.ProductPrice;
 import kr.hhplus.be.server.domain.vo.product.ProductStock;
 import kr.hhplus.be.server.domain.vo.user.UserId;
 
-
-import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public class TestConstants {
 
@@ -64,18 +61,26 @@ public class TestConstants {
             BALANCE_AMOUNT.value() - ORDER_DISCOUNT_PRICE.value()
     );
 
-    public static final Guid GUID = new Guid(System.currentTimeMillis());
+    public static final OrderItemOriginalPrice ORDER_ITEM_ORIGINAL_PRICE = new OrderItemOriginalPrice(1000L);
+    public static final OrderItemDiscountPrice ORDER_ITEM_DISCOUNT_PRICE = new OrderItemDiscountPrice(900L);
+
+    public static final UUID UUID_RANDOM = UUID.randomUUID();
     public static final OrderId ORDER_ID = new OrderId(1L);
     public static final UserId USER_ID = new UserId(1L);
     public static final CouponId COUPON_ID = new CouponId(1L);
     public static final ProductId PRODUCT_ID = new ProductId(1L);
     public static final BalanceId BALANCE_ID = new BalanceId(1L);
+    public static final OrderItemId ORDER_ITEM_ID = new  OrderItemId(1L);
 
     public static final OrderItemQuantities ORDER_ITEM_QUANTITIES = new OrderItemQuantities(Map.of(PRODUCT_ID, QUANTITY));
-    public static final List<ProductId> PRODUCT_IDS = List.of(PRODUCT_ID);
+
+
+    public static OrderItemQuantities orderItemQuantities(ProductId productId) {
+        return new OrderItemQuantities(Map.of(productId, QUANTITY));
+    }
 
     public static final PlaceOrderSagaContext CONTEXT = PlaceOrderSagaContext.create(
-            GUID,
+            UUID_RANDOM,
             ORDER_ID,
             USER_ID,
             COUPON_ID,
@@ -84,44 +89,44 @@ public class TestConstants {
     );
 
     public static final PlaceOrderCommand PLACE_ORDER_COMMAND = new PlaceOrderCommand(
-            GUID,
+            UUID_RANDOM,
             USER_ID,
             COUPON_ID,
-            Map.of(PRODUCT_ID, QUANTITY)
+            ORDER_ITEM_QUANTITIES
     );
 
 
     public static final CancelBalanceDeductionCommand CANCEL_BALANCE_DEDUCTION_COMMAND = new CancelBalanceDeductionCommand(
-            GUID,
+            UUID_RANDOM,
             USER_ID,
             ORDER_DISCOUNT_PRICE
     );
     public static final DeductBalanceCommand DEDUCT_BALANCE_COMMAND = new DeductBalanceCommand(
-            GUID,
+            UUID_RANDOM,
             USER_ID,
             ORDER_DISCOUNT_PRICE
     );
 
     public static final CancelCouponUseCommand CANCEL_COUPON_USE_COMMAND = new CancelCouponUseCommand(
-            GUID,
+            UUID_RANDOM,
             COUPON_ID
     );
     public static final UseCouponCommand USE_COUPON_COMMAND = new UseCouponCommand(
-            GUID,
+            UUID_RANDOM,
             COUPON_ID
     );
 
     public static final DeductStockCommand DEDUCT_STOCK_COMMAND = new DeductStockCommand(
-            GUID,
+            UUID_RANDOM,
             ORDER_ITEM_QUANTITIES
     );
     public static final CancelStockDeductionCommand CANCEL_STOCK_DEDUCTION_COMMAND = new CancelStockDeductionCommand(
-            GUID,
+            UUID_RANDOM,
             ORDER_ITEM_QUANTITIES
     );
 
     public static final CompleteOrderCommand COMPLETE_ORDER_COMMAND = new CompleteOrderCommand(
-            GUID,
+            UUID_RANDOM,
             ORDER_ID
     );
 }

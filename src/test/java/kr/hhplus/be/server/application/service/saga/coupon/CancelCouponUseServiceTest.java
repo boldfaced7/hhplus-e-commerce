@@ -53,17 +53,19 @@ class CancelCouponUseServiceTest extends ApplicationUnitTestSupport {
         }
     }
 
-    void verifyCancelCouponUse(Coupon coupon, boolean isSucceeded) {
+    void verifyCancelCouponUse(Coupon coupon, boolean succeeded) {
         // 쿠폰 조회
         verify(loadCouponPort).loadCouponForUpdate(COUPON_ID);
         if (coupon == null) return;
 
-        // 쿠폰 사용 취소
-        verify(coupon).restore(GUID);
-        // 쿠폰 사용 취소 업데이트
-        verify(updateCouponPort).updateCoupon(coupon);
-        // 이벤트 발행
-        verify(publishEventPort).publishEvents(any(Coupon.class));
+        if (succeeded) {
+            // 쿠폰 사용 취소
+            verify(coupon).restore(UUID_RANDOM);
+            // 쿠폰 사용 취소 업데이트
+            verify(updateCouponPort).updateCoupon(coupon);
+            // 이벤트 발행
+            verify(publishEventPort).publishEvents(any(Coupon.class));
+        }
     }
 
 }
