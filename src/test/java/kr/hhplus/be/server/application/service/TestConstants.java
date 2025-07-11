@@ -22,6 +22,7 @@ import kr.hhplus.be.server.domain.vo.product.ProductPrice;
 import kr.hhplus.be.server.domain.vo.product.ProductStock;
 import kr.hhplus.be.server.domain.vo.user.UserId;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -70,7 +71,8 @@ public class TestConstants {
     public static final CouponId COUPON_ID = new CouponId(1L);
     public static final ProductId PRODUCT_ID = new ProductId(1L);
     public static final BalanceId BALANCE_ID = new BalanceId(1L);
-    public static final OrderItemId ORDER_ITEM_ID = new  OrderItemId(1L);
+    public static final OrderItemId ORDER_ITEM_ID = new OrderItemId(1L);
+    public static final List<ProductId> PRODUCT_IDS = List.of(PRODUCT_ID);
 
     public static final OrderItemQuantities ORDER_ITEM_QUANTITIES = new OrderItemQuantities(Map.of(PRODUCT_ID, QUANTITY));
 
