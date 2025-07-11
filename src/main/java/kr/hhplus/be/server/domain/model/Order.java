@@ -7,31 +7,25 @@ import kr.hhplus.be.server.domain.vo.coupon.CouponDiscountRate;
 import kr.hhplus.be.server.domain.vo.coupon.CouponId;
 import kr.hhplus.be.server.domain.vo.order.*;
 import kr.hhplus.be.server.domain.vo.orderitem.OrderItemQuantities;
-import kr.hhplus.be.server.domain.vo.orderitem.OrderItemQuantity;
-import kr.hhplus.be.server.domain.vo.product.ProductId;
-import kr.hhplus.be.server.domain.vo.product.ProductPrice;
+import kr.hhplus.be.server.domain.vo.product.ProductPrices;
 import kr.hhplus.be.server.domain.vo.user.UserId;
-import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.ToString;
 
 import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.Map;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
+import java.util.UUID;
 
 @ToString
 @Getter
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@AllArgsConstructor
 public class Order extends EventDomain {
 
     private OrderId orderId;
-    private Guid guid;
+    private UUID uuid;
     private UserId userId;
     private CouponId couponId;
-    private Map<ProductId, OrderItem> orderItems;
+    private OrderItems orderItems;
     private OrderOriginalTotalPrice originalTotalPrice;
     private OrderDiscountTotalPrice discountTotalPrice;
     private OrderFinished orderFinished;
@@ -40,27 +34,34 @@ public class Order extends EventDomain {
     private LocalDateTime updatedAt;
 
     public static Order create(
-            Guid guid,
+            UUID uuid,
             UserId userId,
             CouponId couponId,
-            Map<ProductId, OrderItemQuantity> orderItemQuantities,
-            Map<ProductId, ProductPrice> productPrices,
+            OrderItemQuantities orderItemQuantities,
+            ProductPrices productPrices,
             CouponDiscountRate discountRate
     ) {
-        var original = new OrderOriginalTotalPrice(
+        var orderItems = OrderItems.create(
                 orderItemQuantities,
-                productPrices
+                productPrices,
+                discountRate
+        );
+        var originalPrice = productPrices.calculateOriginalPrice(
+                orderItemQuantities
+        );
+        var discountPrice = originalPrice.discount(
+                discountRate
         );
         var order = new Order(
                 null,
-                guid,
+                uuid,
                 userId,
                 couponId,
-                OrderItem.create(orderItemQuantities, productPrices, discountRate),
-                original,
-                original.discount(discountRate),
-                new OrderFinished(false),
-                new OrderSucceeded(false),
+                orderItems,
+                originalPrice,
+                discountPrice,
+                OrderFinished.NOT_FINISHED,
+                OrderSucceeded.FAILED,
                 LocalDateTime.now(),
                 LocalDateTime.now()
         );
@@ -68,58 +69,13 @@ public class Order extends EventDomain {
         return order;
     }
 
-    public static Order create(
-            OrderId orderId,
-            Guid guid,
-            UserId userId,
-            CouponId couponId,
-            Map<ProductId, OrderItem> orderItems,
-            OrderOriginalTotalPrice originalTotalPrice,
-            OrderDiscountTotalPrice discountTotalPrice,
-            OrderFinished orderFinished,
-            OrderSucceeded orderSucceeded,
-            LocalDateTime createdAt,
-            LocalDateTime updatedAt
-    ) {
-        return new Order(
-                orderId,
-                guid,
-                userId,
-                couponId,
-                orderItems,
-                originalTotalPrice,
-                discountTotalPrice,
-                orderFinished,
-                orderSucceeded,
-                createdAt,
-                updatedAt
-        );
-    }
-
-    public boolean isFinished() {
-        return orderFinished.value();
-    }
-
     public boolean isSucceeded() {
         return orderSucceeded.value();
     }
 
-    public OrderItemQuantities getOrderItemQuantities() {
-        var map = orderItems.values().stream()
-                .collect(Collectors.toMap(
-                        OrderItem::getProductId,
-                        OrderItem::getQuantity
-                ));
-        return new OrderItemQuantities(map);
-    }
-
-    public Collection<ProductId> getProductIds() {
-        return orderItems.keySet();
-    }
-
-    public void complete(OrderSucceeded isSucceeded) {
-        this.orderFinished = new OrderFinished(true);
-        this.orderSucceeded = isSucceeded;
+    public void complete(OrderSucceeded orderSucceeded) {
+        this.orderFinished = OrderFinished.FINISHED;
+        this.orderSucceeded = orderSucceeded;
         this.updatedAt = LocalDateTime.now();
 
         if (isSucceeded()) {
@@ -131,24 +87,31 @@ public class Order extends EventDomain {
 
     public void markOrderCreated() {
         addEvent(new OrderCreated(
-                guid,
+                uuid,
                 orderId,
                 userId,
                 couponId,
                 discountTotalPrice,
-                getOrderItemQuantities()
+                orderItems.quantities()
         ));
     }
 
     private void markOrderFailed() {
-        addEvent(new OrderFailed(guid, orderId));
+        addEvent(new OrderFailed(uuid, orderId));
     }
 
     private void markOrderPlaced() {
-        addEvent(new OrderPlaced(guid, orderId));
+        addEvent(new OrderPlaced(
+                uuid,
+                orderId,
+                userId,
+                couponId,
+                orderItems,
+                originalTotalPrice,
+                discountTotalPrice,
+                orderItems.quantities(),
+                createdAt
+        ));
     }
 
-    public void apply(Consumer<Order> consumer) {
-        consumer.accept(this);
-    }
 }

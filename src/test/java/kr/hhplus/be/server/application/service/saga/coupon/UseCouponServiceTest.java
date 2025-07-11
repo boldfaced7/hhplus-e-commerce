@@ -71,7 +71,7 @@ class UseCouponServiceTest extends ApplicationUnitTestSupport {
         if (coupon == null) return;
 
         // 쿠폰 사용
-        verify(coupon).use(GUID);
+        verify(coupon).use(UUID_RANDOM);
 
         if (isSucceeded) {
             // 쿠폰 사용 업데이트

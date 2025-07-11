@@ -20,7 +20,7 @@ public class CouponMapper {
     }
 
     public static Coupon toDomain(CouponJpa couponJpa) {
-        return Coupon.create(
+        return new Coupon(
             new CouponId(couponJpa.getId()),
             new UserId(couponJpa.getUserId()),
             new CouponDiscountRate(couponJpa.getDiscountRate()),

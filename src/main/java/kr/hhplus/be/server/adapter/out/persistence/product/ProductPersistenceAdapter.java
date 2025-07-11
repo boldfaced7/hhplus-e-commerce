@@ -67,7 +67,7 @@ public class ProductPersistenceAdapter implements
 
     @Override
     public Products updateProducts(Products products) {
-        var toBeUpdated = ProductMapper.toJpa(products.getProducts().values());
+        var toBeUpdated = ProductMapper.toJpa(products.getProductMap().values());
 
         var updated = productJpaRepository.saveAll(toBeUpdated).stream()
                 .map(ProductMapper::toDomain)

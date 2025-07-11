@@ -1,7 +1,6 @@
 package kr.hhplus.be.server.application.service.saga;
 
 import kr.hhplus.be.server.domain.vo.coupon.CouponId;
-import kr.hhplus.be.server.domain.vo.order.Guid;
 import kr.hhplus.be.server.domain.vo.order.OrderDiscountTotalPrice;
 import kr.hhplus.be.server.domain.vo.order.OrderId;
 import kr.hhplus.be.server.domain.vo.orderitem.OrderItemQuantities;
@@ -11,11 +10,13 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.ToString;
 
+import java.util.UUID;
+
 @ToString
 @Getter
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class PlaceOrderSagaContext {
-    private Guid guid;
+    private UUID uuid;
     private OrderId orderId;
     private UserId userId;
     private CouponId couponId;
@@ -23,7 +24,7 @@ public class PlaceOrderSagaContext {
     private OrderItemQuantities quantities;
 
     public static PlaceOrderSagaContext create(
-            Guid guid,
+            java.util.UUID uuid,
             OrderId orderId,
             UserId userId,
             CouponId couponId,
@@ -31,7 +32,7 @@ public class PlaceOrderSagaContext {
             OrderItemQuantities quantities
     ) {
         return new PlaceOrderSagaContext(
-                guid,
+                uuid,
                 orderId,
                 userId,
                 couponId,

@@ -7,19 +7,17 @@ import kr.hhplus.be.server.domain.exception.CouponUnavailableException;
 import kr.hhplus.be.server.domain.vo.coupon.CouponDiscountRate;
 import kr.hhplus.be.server.domain.vo.coupon.CouponId;
 import kr.hhplus.be.server.domain.vo.coupon.CouponUsed;
-import kr.hhplus.be.server.domain.vo.order.Guid;
 import kr.hhplus.be.server.domain.vo.user.UserId;
-import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.ToString;
 
 import java.time.LocalDateTime;
-import java.util.function.Consumer;
+import java.util.UUID;
 
 @ToString
 @Getter
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@AllArgsConstructor
 public class Coupon extends EventDomain {
 
     private CouponId couponId;
@@ -55,42 +53,24 @@ public class Coupon extends EventDomain {
         );
     }
 
-    public static Coupon create(
-            CouponId couponId,
-            UserId userId,
-            CouponDiscountRate discountRate,
-            CouponUsed used,
-            LocalDateTime issuedAt,
-            LocalDateTime usedAt
-    ) {
-        return new Coupon(
-                couponId,
-                userId,
-                discountRate,
-                used,
-                issuedAt,
-                usedAt
-        );
-    }
-
-    public void use(Guid guid) {
+    public void use(UUID uuid) {
         checkCouponAvailable();
 
         if (this.used.equals(CouponUsed.USED)) {
-            markCouponUseFailed(guid);
+            markCouponUseFailed(uuid);
             throw new CouponAlreadyUsedException(couponId);
         }
         this.used = CouponUsed.USED;
         this.usedAt = LocalDateTime.now();
-        markCouponUsed(guid);
+        markCouponUsed(uuid);
     }
 
-    public void restore(Guid guid) {
+    public void restore(UUID uuid) {
         checkCouponAvailable();
 
         this.used = CouponUsed.NOT_USED;
         this.usedAt = issuedAt;
-        markCouponUseCancelled(guid);
+        markCouponUseCancelled(uuid);
     }
 
     public boolean isCouponUnavailable() {
@@ -105,20 +85,16 @@ public class Coupon extends EventDomain {
         }
     }
 
-    public void apply(Consumer<Coupon> consumer) {
-        consumer.accept(this);
+    private void markCouponUsed(UUID uuid) {
+        addEvent(new kr.hhplus.be.server.domain.event.coupon.CouponUsed(uuid, couponId));
     }
 
-    private void markCouponUsed(Guid guid) {
-        addEvent(new kr.hhplus.be.server.domain.event.coupon.CouponUsed(guid, couponId));
+    private void markCouponUseFailed(UUID uuid) {
+        addEvent(new CouponUseFailed(uuid, couponId));
     }
 
-    private void markCouponUseFailed(Guid guid) {
-        addEvent(new CouponUseFailed(guid, couponId));
-    }
-
-    private void markCouponUseCancelled(Guid guid) {
-        addEvent(new CouponUseCancelled(guid, couponId));
+    private void markCouponUseCancelled(UUID uuid) {
+        addEvent(new CouponUseCancelled(uuid, couponId));
     }
 
 

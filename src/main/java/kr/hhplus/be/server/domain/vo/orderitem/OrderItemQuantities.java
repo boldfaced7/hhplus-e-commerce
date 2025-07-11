@@ -5,11 +5,22 @@ import kr.hhplus.be.server.domain.vo.product.ProductId;
 import java.util.Collection;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public record OrderItemQuantities(
         Map<ProductId, OrderItemQuantity> quantities
 ) {
+
+    public static OrderItemQuantities create(Map<Long, Integer> premitiveMap) {
+        var quantities = premitiveMap.entrySet().stream()
+                .collect(Collectors.toMap(
+                        entry -> new ProductId(entry.getKey()),
+                        entry -> new OrderItemQuantity(entry.getValue())
+                ));
+        return new OrderItemQuantities(quantities);
+    }
+
     public OrderItemQuantity getQuantity(ProductId productId) {
         return quantities.get(productId);
     }

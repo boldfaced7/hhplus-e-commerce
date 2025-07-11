@@ -4,10 +4,10 @@ import kr.hhplus.be.server.domain.event.product.StockDeducted;
 import kr.hhplus.be.server.domain.event.product.StockDeductionCancelled;
 import kr.hhplus.be.server.domain.event.product.StockDeductionFailed;
 import kr.hhplus.be.server.domain.exception.ProductNotFoundException;
-import kr.hhplus.be.server.domain.vo.order.Guid;
 import kr.hhplus.be.server.domain.vo.orderitem.OrderItemQuantities;
+import kr.hhplus.be.server.domain.vo.orderitem.OrderItemQuantity;
 import kr.hhplus.be.server.domain.vo.product.ProductId;
-import kr.hhplus.be.server.domain.vo.product.ProductPrice;
+import kr.hhplus.be.server.domain.vo.product.ProductPrices;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -15,7 +15,7 @@ import lombok.ToString;
 
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Consumer;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @ToString
@@ -23,41 +23,38 @@ import java.util.stream.Collectors;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class Products extends EventDomain {
 
-    private Map<ProductId, Product> products;
+    private Map<ProductId, Product> productMap;
 
     public static Products create(Map<ProductId, Product> products) {
         return new Products(products);
     }
 
-    public Map<ProductId, ProductPrice> getProductPrices() {
-        return products.values().stream()
+    public ProductPrices getProductPrices() {
+        var collected = productMap.values().stream()
                 .collect(Collectors.toMap(
                         Product::getProductId,
                         Product::getPrice
                 ));
+        return new ProductPrices(collected);
     }
 
     public Product getProduct(ProductId productId) {
-        return products.get(productId);
+        return productMap.get(productId);
     }
 
-    public void restoreAll(Guid guid, OrderItemQuantities quantities) {
+    public void restoreAll(UUID uuid, OrderItemQuantities quantities) {
         checkAllProductExistence();
-        quantities.forEach((productId, orderItemQuantity) -> {
-            products.get(productId).add(orderItemQuantity);
-        });
-        markStockDeductionCancelled(guid, quantities);
+        quantities.forEach(this::add);
+        markStockDeductionCancelled(uuid, quantities);
     }
 
-    public void deductAll(Guid guid, OrderItemQuantities quantities) {
+    public void deductAll(UUID uuid, OrderItemQuantities quantities) {
         checkAllProductExistence();
         try {
-            quantities.forEach((productId, orderItemQuantity) -> {
-                products.get(productId).deduct(orderItemQuantity);
-            });
-            markStockDeducted(guid, quantities);
+            quantities.forEach(this::deduct);
+            markStockDeducted(uuid, quantities);
         } catch (Exception e) {
-            markStockDeductionFailed(guid, quantities);
+            markStockDeductionFailed(uuid, quantities);
             throw e;
         }
     }
@@ -70,28 +67,29 @@ public class Products extends EventDomain {
     }
 
     public boolean hasAllProducts() {
-        if (products == null || products.isEmpty()) return false;
+        if (productMap == null || productMap.isEmpty()) return false;
 
-        return products.values().stream()
+        return productMap.values().stream()
                 .allMatch(Objects::nonNull);
     }
 
-    public void apply(Consumer<Products> consumer) {
-        if (hasAllProducts()) {
-            consumer.accept(this);
-        }
+    private void markStockDeducted(UUID uuid, OrderItemQuantities quantities) {
+        addEvent(new StockDeducted(uuid, quantities));
     }
 
-    private void markStockDeducted(Guid guid, OrderItemQuantities quantities) {
-        addEvent(new StockDeducted(guid, quantities));
+    private void markStockDeductionFailed(UUID uuid, OrderItemQuantities quantities) {
+        addEvent(new StockDeductionFailed(uuid, quantities));
     }
 
-    private void markStockDeductionFailed(Guid guid, OrderItemQuantities quantities) {
-        addEvent(new StockDeductionFailed(guid, quantities));
+    private void markStockDeductionCancelled(UUID uuid, OrderItemQuantities quantities) {
+        addEvent(new StockDeductionCancelled(uuid, quantities));
     }
 
-    private void markStockDeductionCancelled(Guid guid, OrderItemQuantities quantities) {
-        addEvent(new StockDeductionCancelled(guid, quantities));
+    private void add(ProductId productId, OrderItemQuantity orderItemQuantity) {
+        productMap.get(productId).add(orderItemQuantity);
     }
 
+    private void deduct(ProductId productId, OrderItemQuantity orderItemQuantity) {
+        productMap.get(productId).deduct(orderItemQuantity);
+    }
 }

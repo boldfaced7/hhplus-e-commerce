@@ -24,11 +24,11 @@ import kr.hhplus.be.server.domain.event.coupon.CouponUsed;
 import kr.hhplus.be.server.domain.event.order.OrderCreated;
 import kr.hhplus.be.server.domain.event.product.StockDeducted;
 import kr.hhplus.be.server.domain.event.product.StockDeductionFailed;
-import kr.hhplus.be.server.domain.vo.order.Guid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.UUID;
 import java.util.function.Function;
 
 @Slf4j
@@ -50,7 +50,7 @@ public class PlaceOrderSagaOrchestrator implements OrchestratePlaceOrderSagaUseC
 
     public void saveContext(OrderCreated event) {
         var context = PlaceOrderSagaContext.create(
-                event.guid(),
+                event.uuid(),
                 event.orderId(),
                 event.userId(),
                 event.couponId(),
@@ -63,7 +63,7 @@ public class PlaceOrderSagaOrchestrator implements OrchestratePlaceOrderSagaUseC
     // 주문 생성됨: 쿠폰 사용 서비스 호출
     public void handle(OrderCreated event) {
         var command = new UseCouponCommand(
-                event.guid(),
+                event.uuid(),
                 event.couponId()
         );
         useCouponService.useCoupon(command);
@@ -71,8 +71,8 @@ public class PlaceOrderSagaOrchestrator implements OrchestratePlaceOrderSagaUseC
 
     // 쿠폰 사용됨: 잔액 차감 서비스 호출
     public void handle(CouponUsed event) {
-        var command = getCommand(event.guid(), context -> new DeductBalanceCommand(
-            context.getGuid(),
+        var command = getCommand(event.uuid(), context -> new DeductBalanceCommand(
+            context.getUuid(),
             context.getUserId(),
             context.getPrice()
         ));
@@ -81,8 +81,8 @@ public class PlaceOrderSagaOrchestrator implements OrchestratePlaceOrderSagaUseC
 
     // 잔액 차감됨: 재고 차감 서비스 호출
     public void handle(BalanceDeducted event) {
-        var command = getCommand(event.guid(), context -> new DeductStockCommand(
-            context.getGuid(),
+        var command = getCommand(event.uuid(), context -> new DeductStockCommand(
+            context.getUuid(),
             context.getQuantities()
         ));
         deductStockService.deductStock(command);
@@ -90,8 +90,8 @@ public class PlaceOrderSagaOrchestrator implements OrchestratePlaceOrderSagaUseC
 
     // 재고 차감됨: 주문 종결 서비스 호출
     public void handle(StockDeducted event) {
-        var command = getCommand(event.guid(), context -> new CompleteOrderCommand(
-            context.getGuid(),
+        var command = getCommand(event.uuid(), context -> new CompleteOrderCommand(
+            context.getUuid(),
             context.getOrderId()
         ));
         completeOrderService.succeedOrder(command);
@@ -99,8 +99,8 @@ public class PlaceOrderSagaOrchestrator implements OrchestratePlaceOrderSagaUseC
 
     // 쿠폰 사용 실패: 주문 종결 서비스 호출
     public void handle(CouponUseFailed event) {
-        var command = getCommand(event.guid(), context -> new CompleteOrderCommand(
-            context.getGuid(),
+        var command = getCommand(event.uuid(), context -> new CompleteOrderCommand(
+            context.getUuid(),
             context.getOrderId()
         ));
         completeOrderService.failOrder(command);
@@ -108,8 +108,8 @@ public class PlaceOrderSagaOrchestrator implements OrchestratePlaceOrderSagaUseC
 
     // 잔액 차감 실패: 쿠폰 사용 취소 서비스 호출
     public void handle(BalanceDeductionFailed event) {
-        var command = getCommand(event.guid(), context -> new CancelCouponUseCommand(
-            context.getGuid(),
+        var command = getCommand(event.uuid(), context -> new CancelCouponUseCommand(
+            context.getUuid(),
             context.getCouponId()
         ));
         cancelCouponUseService.cancelCouponUse(command);
@@ -117,8 +117,8 @@ public class PlaceOrderSagaOrchestrator implements OrchestratePlaceOrderSagaUseC
 
     // 재고 차감 실패: 잔액 차감 취소 서비스 호출
     public void handle(StockDeductionFailed event) {
-        var command = getCommand(event.guid(), context -> new CancelBalanceDeductionCommand(
-            context.getGuid(),
+        var command = getCommand(event.uuid(), context -> new CancelBalanceDeductionCommand(
+            context.getUuid(),
             context.getUserId(),
             context.getPrice()
         ));
@@ -127,8 +127,8 @@ public class PlaceOrderSagaOrchestrator implements OrchestratePlaceOrderSagaUseC
 
     // 잔액 차감 취소됨: 쿠폰 사용 취소 서비스 호출
     public void handle(BalanceDeductionCancelled event) {
-        var command = getCommand(event.guid(), context -> new CancelCouponUseCommand(
-            context.getGuid(),
+        var command = getCommand(event.uuid(), context -> new CancelCouponUseCommand(
+            context.getUuid(),
             context.getCouponId()
         ));
         cancelCouponUseService.cancelCouponUse(command);
@@ -136,15 +136,15 @@ public class PlaceOrderSagaOrchestrator implements OrchestratePlaceOrderSagaUseC
 
     // 쿠폰 사용 취소됨: 주문 종결 서비스 호출
     public void handle(CouponUseCancelled event) {
-        var command = getCommand(event.guid(), context -> new CompleteOrderCommand(
-            context.getGuid(),
+        var command = getCommand(event.uuid(), context -> new CompleteOrderCommand(
+            context.getUuid(),
             context.getOrderId()
         ));
         completeOrderService.failOrder(command);
     }
 
-    private <T> T getCommand(Guid guid, Function<PlaceOrderSagaContext, T> mapper) {
-        return loadPlaceOrderSagaContextPort.loadByGuid(guid)
+    private <T> T getCommand(UUID uuid, Function<PlaceOrderSagaContext, T> mapper) {
+        return loadPlaceOrderSagaContextPort.loadByUuid(uuid)
                 .map(mapper)
                 .orElseThrow(() -> new IllegalStateException("PlaceOrderSagaContext not found"));
     }

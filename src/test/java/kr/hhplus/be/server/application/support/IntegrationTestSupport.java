@@ -14,6 +14,7 @@ import kr.hhplus.be.server.adapter.out.persistence.product.ProductPersistenceAda
 import org.junit.jupiter.api.Disabled;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.MySQLContainer;
@@ -37,6 +38,7 @@ public abstract class IntegrationTestSupport {
     @Autowired public OrderItemJpaRepository orderItemJpaRepository;
     @Autowired public ProductJpaRepository productJpaRepository;
     @Autowired public RedisPlaceOrderSagaContextRepository redisPlaceOrderSagaContextRepository;
+    @Autowired public StringRedisTemplate redisTemplate;
 
     public void clearRepository() {
         balanceJpaRepository.deleteAll();
@@ -45,6 +47,7 @@ public abstract class IntegrationTestSupport {
         orderItemJpaRepository.deleteAll();
         productJpaRepository.deleteAll();
         redisPlaceOrderSagaContextRepository.deleteAll();
+        redisTemplate.delete(redisTemplate.keys("*"));
     }
 
 

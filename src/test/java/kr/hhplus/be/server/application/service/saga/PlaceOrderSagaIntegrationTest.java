@@ -23,7 +23,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
-import java.util.Map;
 
 import static kr.hhplus.be.server.application.service.TestConstants.*;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -140,7 +139,7 @@ class PlaceOrderSagaIntegrationTest extends IntegrationTestSupport {
         ));
         couponId = coupon.getCouponId();
         productId = product.getProductId();
-        command = new PlaceOrderCommand(GUID, USER_ID, couponId, Map.of(productId, QUANTITY));
+        command = new PlaceOrderCommand(UUID_RANDOM, USER_ID, couponId, orderItemQuantities(productId));
     }
 
     void assertOrderState(OrderId orderId, OrderSucceeded orderSucceeded) {

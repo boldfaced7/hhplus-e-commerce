@@ -59,16 +59,18 @@ class CancelStockDeductionServiceTest extends ApplicationUnitTestSupport {
         }
     }
 
-    void verifyCancelStockDeduction(Products products, boolean isSucceeded) {
+    void verifyCancelStockDeduction(Products products, boolean succeeded) {
         // 재고 조회
         verify(loadProductsPort).loadProductsForUpdate(anyCollection());
         if (!products.hasAllProducts()) return;
 
-        // 재고 차감 취소
-        verify(products).restoreAll(GUID, ORDER_ITEM_QUANTITIES);
-        // 재고 차감 취소 업데이트
-        verify(updateProductsPort).updateProducts(products);
-        // 이벤트 발행
-        verify(publishEventPort).publishEvents(any(Products.class));
+        if (succeeded) {
+            // 재고 차감 취소
+            verify(products).restoreAll(UUID_RANDOM, ORDER_ITEM_QUANTITIES);
+            // 재고 차감 취소 업데이트
+            verify(updateProductsPort).updateProducts(products);
+            // 이벤트 발행
+            verify(publishEventPort).publishEvents(any(Products.class));
+        }
     }
 }

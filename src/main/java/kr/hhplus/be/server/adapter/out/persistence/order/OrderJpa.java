@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Data
@@ -17,7 +18,7 @@ public class OrderJpa {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @Column(unique = true)
-    private Long guid;
+    private UUID uuid;
     private Long userId;
     private Long couponId;
     private Long originalTotalPrice;

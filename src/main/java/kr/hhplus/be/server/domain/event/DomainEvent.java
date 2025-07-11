@@ -1,7 +1,7 @@
 package kr.hhplus.be.server.domain.event;
 
-import kr.hhplus.be.server.domain.vo.order.Guid;
+import java.util.UUID;
 
 public interface DomainEvent {
-    Guid guid();
+    UUID uuid();
 }

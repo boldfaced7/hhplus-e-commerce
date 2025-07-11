@@ -72,7 +72,7 @@ class DeductBalanceServiceTest extends ApplicationUnitTestSupport {
         if (balance == null) return;
 
         // 잔액 차감
-        verify(balance).deduct(GUID, ORDER_DISCOUNT_PRICE);
+        verify(balance).deduct(UUID_RANDOM, ORDER_DISCOUNT_PRICE);
 
         if (isSucceeded) {
             // 잔액 차감 업데이트
