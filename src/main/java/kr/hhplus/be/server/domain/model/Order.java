@@ -101,7 +101,17 @@ public class Order extends EventDomain {
     }
 
     private void markOrderPlaced() {
-        addEvent(new OrderPlaced(uuid, orderId));
+        addEvent(new OrderPlaced(
+                uuid,
+                orderId,
+                userId,
+                couponId,
+                orderItems,
+                originalTotalPrice,
+                discountTotalPrice,
+                orderItems.quantities(),
+                createdAt
+        ));
     }
 
 }
